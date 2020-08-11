@@ -1,23 +1,31 @@
+# CartPole-REINFORCE Experiment
+# 2020/08/11 SYC 
+
 import models.REINFORCE as REINFORCE
 import models.expStrategy.epsilonGreedy as EPSG
 import envs.cartPole as cartPole
 import models.util as Util
 import logging
 import matplotlib as plt
+# To run tqdm on notebook, import tqdm.notebook
+# from tqdm.notebook import tqdm
+# Run on pure python
 from tqdm import tqdm
 
-# env = cartPole.CartPoleEnv()
-# print(env.get_num_actions())
-# print(env.env.action_space.sample())
+# Config logging module to enable on notebook
+# logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
+# logger = logging.getLogger()
+# logger.setLevel(logging.DEBUG)
+
+# Test GPU and show the available logical & physical GPUs
 Util.test_gpu()
 
-logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 env = cartPole.CartPoleEnv()
 env.reset()
 NUM_STATE_FEATURES = env.get_num_state_features()
 NUM_ACTIONS = env.get_num_actions()
 BATCH_SIZE = 32
-EPISODE_NUM = 2000
+EPISODE_NUM = 20
 PRINT_EVERY_EPISODE = 20
 LEARNING_RATE = 1e-4
 REWARD_DISCOUNT = 0.9
@@ -58,17 +66,25 @@ for episode in range(1, EPISODE_NUM + 1):
     bar.update(1)        
     env.reset()
 
-bar.close()
+bar.close()    
+logging.info("Accumulated Reward: {} | Loss: {}".format(round(accum_reward / PRINT_EVERY_EPISODE), agent.get_metrics_loss()))
+agent.reset_metrics_loss()
+
 
 # Evaluate the model
 agent.shutdown_explore()
 agent.reset_metrics_loss()
+# Reset Game
+env_state = env.reset()
+accum_reward = 0
+
 while not env.is_over():
-    env.render()
+    # env.render()
     action = agent.select_action(state)
     state_prime, reward, is_done, info = env.act(action)
 
     state = state_prime
     accum_reward += reward
 
-logging.info("Accumulated Reward: {}".format(round(accum_reward / PRINT_EVERY_EPISODE)))
+logging.info("Evaluate")
+logging.info("Accumulated Reward: {}".format(accum_reward))

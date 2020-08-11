@@ -10,9 +10,17 @@ class FlappyBirdEnv:
 
     def reset(self):
         self.env.reset_game()
+        state = self.get_state()
+
+        return state
     
     def act(self, action):
-        return self.env.act(self.env.getActionSet()[action])
+        # return state_prime, reward, done, info
+        reward = self.env.act(self.env.getActionSet()[action])
+        state_prime = self.get_state()
+        is_done = self.is_over()
+        info = ""
+        return state_prime, reward, is_done, info
 
     def get_num_actions(self):
         return len(self.env.getActionSet())
@@ -30,7 +38,7 @@ class FlappyBirdEnv:
         return len(self.game.getGameState())
 
     def get_state(self):
-        return self.game.getGameState()
+        return list(self.game.getGameState().values())
 
     def is_over(self):
         return self.env.game_over()
