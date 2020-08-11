@@ -43,7 +43,7 @@ for episode in range(1, EPISODE_NUM + 1):
     if episode % PRINT_EVERY_EPISODE == 1:
         if episode > 1:
             bar.close()
-            logging.info("Accumulated Reward: {} | Loss: {}".format(round(accum_reward / PRINT_EVERY_EPISODE), agent.get_metrics_loss()))
+            logging.info("Avgerage Accumulated Reward: {} | Loss: {}".format(round(accum_reward / PRINT_EVERY_EPISODE), agent.get_metrics_loss()))
             logging.info("Episode {}".format(episode))
             agent.reset_metrics_loss()
             accum_reward = 0
