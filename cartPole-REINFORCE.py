@@ -25,7 +25,7 @@ Util.test_gpu()
 env = cartPole.CartPoleEnv()
 NUM_STATE_FEATURES = env.get_num_state_features()
 NUM_ACTIONS = env.get_num_actions()
-EPISODE_NUM = 20
+EPISODE_NUM = 5000
 PRINT_EVERY_EPISODE = 20
 LEARNING_RATE = 3e-4
 REWARD_DISCOUNT = 0.9
