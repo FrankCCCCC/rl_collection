@@ -15,8 +15,8 @@ from tqdm import tqdm
 # Config Logging format
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 # Config logging module to enable on notebook
-# logger = logging.getLogger()
-# logger.setLevel(logging.DEBUG)
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
 
 # Block any pop-up windows
 os.environ['SDL_VIDEODRIVER'] = 'dummy'
