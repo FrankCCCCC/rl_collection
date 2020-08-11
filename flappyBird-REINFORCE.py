@@ -16,8 +16,8 @@ from tqdm import tqdm
 # Config logging format
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 # Config logging module to enable on notebook
-# logger = logging.getLogger()
-# logger.setLevel(logging.DEBUG)
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
 
 # Test GPU and show the available logical & physical GPUs
 Util.test_gpu()
