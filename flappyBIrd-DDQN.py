@@ -7,6 +7,8 @@ import envs.flappyBird as Game
 import models.util as Util
 import os
 import logging
+import matplotlib.pyplot as plt
+from matplotlib.pylab import figure
 # To run tqdm on notebook, import tqdm.notebook
 # from tqdm.notebook import tqdm
 # Run on pure python
@@ -28,7 +30,7 @@ game = Game.FlappyBirdEnv()
 NUM_STATE_FEATURES = game.get_num_state_features()
 NUM_ACTIONS = game.get_num_actions()
 BATCH_SIZE = 32
-EPISODE_NUM = 20000
+EPISODE_NUM = 30000
 PRINT_EVERY_EPISODE = 20
 
 exp_stg = EPSG.EpsilonGreedy(0.1, NUM_ACTIONS)
@@ -37,6 +39,9 @@ agent = DDQN.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, 1000, 0.9, 1e-5, exp_stg
 state = game.reset()
 accum_reward = 0
 bar = []
+# Reward History
+r_his = []
+episode_reward = 0
 logging.info("Episode 1")
 for episode in range(1, EPISODE_NUM + 1):
     
@@ -59,9 +64,12 @@ for episode in range(1, EPISODE_NUM + 1):
 
         state = state_prime
         accum_reward += reward
+        episode_reward += reward
 
     bar.update(1)        
     game.reset()
+    r_his.append(episode_reward)
+    episode_reward = 0
 
 logging.info("Accumulated Reward: {} | Loss: {}".format(round(accum_reward / PRINT_EVERY_EPISODE), agent.get_metrics_loss()))
 agent.reset_metrics_loss()
@@ -83,3 +91,12 @@ while not game.is_over():
     
 logging.info("Evaluate")
 logging.info("Accumulated Reward: {}".format(accum_reward))
+r_his.append(accum_reward)
+
+# Plot Reward History
+figure(num=None, figsize=(16, 6), dpi=80)
+plt.plot(r_his, color='blue')
+# plt.plot(loss_his, color='red')
+plt.xlabel('Episodes')
+plt.ylabel('Avg-Accumulate Rewards')
+plt.savefig('flappyBIrd-DDQN-res.svg')

@@ -7,7 +7,8 @@ import envs.flappyBird as flappyBird
 import models.util as Util
 import os
 import logging
-import matplotlib as plt
+import matplotlib.pyplot as plt
+from matplotlib.pylab import figure
 import tensorflow as tf
 import numpy as np
 # To run tqdm on notebook, import tqdm.notebook
@@ -40,12 +41,13 @@ class FlB_REIN(REINFORCE.Agent):
     # Build a new model for Flappy Bird Env
     def build_model(self, name):
         nn_input = tf.keras.Input(shape = self.state_size, dtype = self.data_type)
+        initializer = tf.keras.initializers.TruncatedNormal(mean = 0, stddev = 0.1)
 
-        x = tf.keras.layers.Dense(units = 128)(nn_input)
+        x = tf.keras.layers.Dense(units = 128, kernel_initializer = initializer)(nn_input)
         x = tf.keras.layers.ReLU()(x)
-        x = tf.keras.layers.Dense(units = 128)(x)
+        x = tf.keras.layers.Dense(units = 128, kernel_initializer = initializer)(x)
         x = tf.keras.layers.ReLU()(x)
-        x = tf.keras.layers.Dense(units = self.num_action)(x)
+        x = tf.keras.layers.Dense(units = self.num_action, kernel_initializer = initializer)(x)
         nn_output = tf.keras.activations.softmax(x)
 
         model = tf.keras.Model(name = name, inputs = nn_input, outputs = nn_output)
@@ -69,19 +71,21 @@ class FlB_REIN(REINFORCE.Agent):
         # print(gt)
         # print(states)
         predicts = self.predict(states)
-        # print(predicts)
+        print(predicts)
         
         # indice = tf.stack([tf.range(len(actions)), actions], axis = 1)
         # predict_probs = tf.gather_nd(predicts, indice)
         # predict_log_probs = tf.math.log(predict_probs)
 
-        # log_prob = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=predicts, labels=actions)
-        log_prob = tf.reduce_sum(tf.math.log(predicts) * tf.one_hot(actions, self.num_action), axis = 1)
+        log_prob = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=predicts, labels=actions)
+        # log_prob = tf.reduce_sum(tf.math.log(predicts) * tf.one_hot(actions, self.num_action), axis = 1)
         # print(log_prob)
 
         # Compute loss as formular: loss = Sum of a trajectory(-gamma * log(Pr(s, a| Theta)) * Gt)
         # Update model with a trajectory Every time.
-        return tf.reduce_sum(-log_prob * gt)
+        loss = tf.reduce_sum(-log_prob * gt)
+        print(loss)
+        return loss
 
 exp_stg = EPSG.EpsilonGreedy(0.1, NUM_ACTIONS)
 agent = FlB_REIN((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg)
@@ -141,3 +145,11 @@ while not env.is_over():
 
 logging.info("Evaluate")
 logging.info("Accumulated Reward: {}".format(accum_reward))
+
+# Plot Reward History
+figure(num=None, figsize=(16, 6), dpi=80)
+plt.plot(r_his, color='blue')
+# plt.plot(loss_his, color='red')
+plt.xlabel('Episodes')
+plt.ylabel('Avg-Accumulate Rewards')
+plt.savefig('flappyBird-REINFORCE-res.svg')
