@@ -26,12 +26,12 @@ Util.test_gpu()
 env = cartPole.CartPoleEnv()
 NUM_STATE_FEATURES = env.get_num_state_features()
 NUM_ACTIONS = env.get_num_actions()
-EPISODE_NUM = 20
+EPISODE_NUM = 30000
 PRINT_EVERY_EPISODE = 20
 LEARNING_RATE = 2e-4
 REWARD_DISCOUNT = 0.9
 
-exp_stg = EPSG.EpsilonGreedy(0.1, NUM_ACTIONS)
+exp_stg = EPSG.EpsilonGreedy(0.2, NUM_ACTIONS)
 agent = REINFORCE.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg)
 
 state = env.reset()
@@ -92,9 +92,10 @@ while not env.is_over():
 
 logging.info("Evaluate")
 logging.info("Accumulated Reward: {}".format(accum_reward))
+r_his.append(accum_reward)
 
 # Plot Reward History
-figure(num=None, figsize=(16, 6), dpi=80)
+figure(num=None, figsize=(24, 6), dpi=80)
 plt.plot(r_his, color='blue')
 # plt.plot(loss_his, color='red')
 plt.xlabel('Episodes')
