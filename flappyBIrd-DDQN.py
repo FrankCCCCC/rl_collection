@@ -30,7 +30,7 @@ game = Game.FlappyBirdEnv()
 NUM_STATE_FEATURES = game.get_num_state_features()
 NUM_ACTIONS = game.get_num_actions()
 BATCH_SIZE = 32
-EPISODE_NUM = 30000
+EPISODE_NUM = 20
 PRINT_EVERY_EPISODE = 20
 
 exp_stg = EPSG.EpsilonGreedy(0.1, NUM_ACTIONS)
@@ -94,7 +94,7 @@ logging.info("Accumulated Reward: {}".format(accum_reward))
 r_his.append(accum_reward)
 
 # Plot Reward History
-figure(num=None, figsize=(16, 6), dpi=80)
+figure(num=None, figsize=(24, 6), dpi=80)
 plt.plot(r_his, color='blue')
 # plt.plot(loss_his, color='red')
 plt.xlabel('Episodes')
