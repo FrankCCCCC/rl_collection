@@ -38,8 +38,6 @@ class Agent:
     def loss(self, states, actions, rewards, state_primes):
         # Calculate accumulated reward with discount
         np_rewards = np.array(rewards)
-        # np_rewards[-1] = 0
-        # print(rewards)
         num_reward = np_rewards.shape[0]
         discounts = np.logspace(1, num_reward, base = self.reward_discount, num = num_reward)
         gt = np.zeros(num_reward)
@@ -47,10 +45,7 @@ class Agent:
             gt[i] = np.sum(np.multiply(np_rewards[i:], discounts[:num_reward - i]))
         gt = (gt - np.mean(gt)) / (np.std(gt) + 1e-9)
 
-        # print(gt)
-        # print(states)
         predicts = self.predict(states)
-        # print(predicts)
         
         # indice = tf.stack([tf.range(len(actions)), actions], axis = 1)
         # predict_probs = tf.gather_nd(predicts, indice)
@@ -58,7 +53,6 @@ class Agent:
 
         # log_prob = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=predicts, labels=actions)
         log_prob = tf.reduce_sum(tf.math.log(predicts) * tf.one_hot(actions, self.num_action), axis = 1)
-        # print(log_prob)
 
         # Compute loss as formular: loss = Sum of a trajectory(-gamma * log(Pr(s, a| Theta)) * Gt)
         # Update model with a trajectory Every time.

@@ -7,6 +7,7 @@ import envs.cartPole as cartPole
 import models.util as Util
 import logging
 import matplotlib.pyplot as plt
+from matplotlib.pylab import figure
 import numpy as np
 # To run tqdm on notebook, import tqdm.notebook
 # from tqdm.notebook import tqdm
@@ -25,9 +26,9 @@ Util.test_gpu()
 env = cartPole.CartPoleEnv()
 NUM_STATE_FEATURES = env.get_num_state_features()
 NUM_ACTIONS = env.get_num_actions()
-EPISODE_NUM = 5000
+EPISODE_NUM = 20
 PRINT_EVERY_EPISODE = 20
-LEARNING_RATE = 3e-4
+LEARNING_RATE = 2e-4
 REWARD_DISCOUNT = 0.9
 
 exp_stg = EPSG.EpsilonGreedy(0.1, NUM_ACTIONS)
@@ -92,7 +93,10 @@ while not env.is_over():
 logging.info("Evaluate")
 logging.info("Accumulated Reward: {}".format(accum_reward))
 
+fig = plt.gcf()
+fig.set_size_inches(16, 5)
 plt.plot(r_his, color='blue')
 # plt.plot(loss_his, color='red')
 plt.xlabel('Episodes')
-plt.savefig('cartPole-REINFORCE-res.png')
+plt.ylabel('Avg-Accumulate Rewards')
+plt.savefig('cartPole-REINFORCE-res.svg')

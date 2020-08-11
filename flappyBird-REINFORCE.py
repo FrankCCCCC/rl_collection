@@ -8,6 +8,8 @@ import models.util as Util
 import os
 import logging
 import matplotlib as plt
+import tensorflow as tf
+import numpy as np
 # To run tqdm on notebook, import tqdm.notebook
 # from tqdm.notebook import tqdm
 # Run on pure python
@@ -33,8 +35,56 @@ PRINT_EVERY_EPISODE = 20
 LEARNING_RATE = 1e-4
 REWARD_DISCOUNT = 0.9
 
+# Over write the original NN model and loss function
+class FlB_REIN(REINFORCE.Agent):
+    # Build a new model for Flappy Bird Env
+    def build_model(self, name):
+        nn_input = tf.keras.Input(shape = self.state_size, dtype = self.data_type)
+
+        x = tf.keras.layers.Dense(units = 128)(nn_input)
+        x = tf.keras.layers.ReLU()(x)
+        x = tf.keras.layers.Dense(units = 128)(x)
+        x = tf.keras.layers.ReLU()(x)
+        x = tf.keras.layers.Dense(units = self.num_action)(x)
+        nn_output = tf.keras.activations.softmax(x)
+
+        model = tf.keras.Model(name = name, inputs = nn_input, outputs = nn_output)
+
+        print("Over-write")
+        return model
+
+    # Construct new loss function for Flappy Bird Env
+    def loss(self, states, actions, rewards, state_primes):
+        # Calculate accumulated reward with discount
+        np_rewards = np.array(rewards)
+        # np_rewards[-1] = 0
+        # print(rewards)
+        num_reward = np_rewards.shape[0]
+        discounts = np.logspace(1, num_reward, base = self.reward_discount, num = num_reward)
+        gt = np.zeros(num_reward)
+        for i in range(num_reward):
+            gt[i] = np.sum(np.multiply(np_rewards[i:], discounts[:num_reward - i]))
+        gt = (gt - np.mean(gt)) / (np.std(gt) + 1e-9)
+
+        # print(gt)
+        # print(states)
+        predicts = self.predict(states)
+        # print(predicts)
+        
+        # indice = tf.stack([tf.range(len(actions)), actions], axis = 1)
+        # predict_probs = tf.gather_nd(predicts, indice)
+        # predict_log_probs = tf.math.log(predict_probs)
+
+        # log_prob = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=predicts, labels=actions)
+        log_prob = tf.reduce_sum(tf.math.log(predicts) * tf.one_hot(actions, self.num_action), axis = 1)
+        # print(log_prob)
+
+        # Compute loss as formular: loss = Sum of a trajectory(-gamma * log(Pr(s, a| Theta)) * Gt)
+        # Update model with a trajectory Every time.
+        return tf.reduce_sum(-log_prob * gt)
+
 exp_stg = EPSG.EpsilonGreedy(0.1, NUM_ACTIONS)
-agent = REINFORCE.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg)
+agent = FlB_REIN((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg)
 
 state = env.reset()
 
