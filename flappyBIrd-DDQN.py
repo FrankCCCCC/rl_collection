@@ -30,7 +30,7 @@ game = Game.FlappyBirdEnv()
 NUM_STATE_FEATURES = game.get_num_state_features()
 NUM_ACTIONS = game.get_num_actions()
 BATCH_SIZE = 32
-EPISODE_NUM = 20
+EPISODE_NUM = 30000
 PRINT_EVERY_EPISODE = 20
 
 exp_stg = EPSG.EpsilonGreedy(0.1, NUM_ACTIONS)
