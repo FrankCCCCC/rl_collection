@@ -27,7 +27,7 @@ env = cartPole.CartPoleEnv()
 NUM_STATE_FEATURES = env.get_num_state_features()
 NUM_ACTIONS = env.get_num_actions()
 EPISODE_NUM = 20
-PRINT_EVERY_EPISODE = 20
+PRINT_EVERY_EPISODE = 10000
 LEARNING_RATE = 2e-4
 REWARD_DISCOUNT = 0.9
 
