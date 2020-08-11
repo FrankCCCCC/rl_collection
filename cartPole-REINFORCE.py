@@ -6,7 +6,8 @@ import models.expStrategy.epsilonGreedy as EPSG
 import envs.cartPole as cartPole
 import models.util as Util
 import logging
-import matplotlib as plt
+import matplotlib.pyplot as plt
+import numpy as np
 # To run tqdm on notebook, import tqdm.notebook
 # from tqdm.notebook import tqdm
 # Run on pure python
@@ -24,10 +25,9 @@ Util.test_gpu()
 env = cartPole.CartPoleEnv()
 NUM_STATE_FEATURES = env.get_num_state_features()
 NUM_ACTIONS = env.get_num_actions()
-BATCH_SIZE = 32
-EPISODE_NUM = 2000
+EPISODE_NUM = 20
 PRINT_EVERY_EPISODE = 20
-LEARNING_RATE = 1e-4
+LEARNING_RATE = 3e-4
 REWARD_DISCOUNT = 0.9
 
 exp_stg = EPSG.EpsilonGreedy(0.1, NUM_ACTIONS)
@@ -37,6 +37,9 @@ state = env.reset()
 accum_reward = 0
 # tqdm progress bar
 bar = []
+# Reward History
+r_his = []
+episode_reward = 0
 logging.info("Episode 1")
 for episode in range(1, EPISODE_NUM + 1):
     if episode % PRINT_EVERY_EPISODE == 1:
@@ -52,15 +55,17 @@ for episode in range(1, EPISODE_NUM + 1):
         # env.render()
         action = agent.select_action(state)
         state_prime, reward, is_done, info = env.act(action)
-
         agent.add_buffer(state, action, reward, state_prime)
         # print(f'State: {state}, Action: {action}, Reward: {reward}, State_Prime: {state_prime}')
 
         state = state_prime
         accum_reward += reward
+        episode_reward += reward     
 
-    agent.update()
+    loss = agent.update()
     agent.reset_buffer()
+    r_his.append(episode_reward)
+    episode_reward = 0
 
     bar.update(1)        
     env.reset()
@@ -86,3 +91,8 @@ while not env.is_over():
 
 logging.info("Evaluate")
 logging.info("Accumulated Reward: {}".format(accum_reward))
+
+plt.plot(r_his, color='blue')
+# plt.plot(loss_his, color='red')
+plt.xlabel('Episodes')
+plt.savefig('cartPole-REINFORCE-res.png')

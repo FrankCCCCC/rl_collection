@@ -38,20 +38,27 @@ class Agent:
     def loss(self, states, actions, rewards, state_primes):
         # Calculate accumulated reward with discount
         np_rewards = np.array(rewards)
+        # np_rewards[-1] = 0
+        # print(rewards)
         num_reward = np_rewards.shape[0]
         discounts = np.logspace(1, num_reward, base = self.reward_discount, num = num_reward)
         gt = np.zeros(num_reward)
         for i in range(num_reward):
             gt[i] = np.sum(np.multiply(np_rewards[i:], discounts[:num_reward - i]))
         gt = (gt - np.mean(gt)) / (np.std(gt) + 1e-9)
-        
-        predicts = self.predict(states)
-        # 
-        indice = tf.stack([tf.range(len(actions)), actions], axis = 1)
-        predict_probs = tf.gather_nd(predicts, indice)
-        predict_log_probs = tf.math.log(predict_probs)
 
+        # print(gt)
+        # print(states)
+        predicts = self.predict(states)
+        # print(predicts)
+        
+        # indice = tf.stack([tf.range(len(actions)), actions], axis = 1)
+        # predict_probs = tf.gather_nd(predicts, indice)
+        # predict_log_probs = tf.math.log(predict_probs)
+
+        # log_prob = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=predicts, labels=actions)
         log_prob = tf.reduce_sum(tf.math.log(predicts) * tf.one_hot(actions, self.num_action), axis = 1)
+        # print(log_prob)
 
         # Compute loss as formular: loss = Sum of a trajectory(-gamma * log(Pr(s, a| Theta)) * Gt)
         # Update model with a trajectory Every time.
@@ -83,7 +90,7 @@ class Agent:
         with tf.GradientTape() as tape:
             sample_states, sample_actions, sample_rewards, sample_state_primes = self.sample()
             loss = self.loss(sample_states, sample_actions, sample_rewards, sample_state_primes)
-            # print("{}".format(loss))
+            # print("Loss: {}".format(loss))
         # Update gradient
         gradients = tape.gradient(loss, self.model.trainable_variables)
         self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
@@ -93,6 +100,8 @@ class Agent:
         self.exploration_strategy.update_epsilon()
 
         self.iter += 1
+
+        return loss
     
     def preprocess_state(self, env_state):
         # Preprocess SINGLE state

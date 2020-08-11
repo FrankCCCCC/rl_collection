@@ -3,8 +3,9 @@
 
 import models.REINFORCE as REINFORCE
 import models.expStrategy.epsilonGreedy as EPSG
-import envs.cartPole as cartPole
+import envs.flappyBird as flappyBird
 import models.util as Util
+import os
 import logging
 import matplotlib as plt
 # To run tqdm on notebook, import tqdm.notebook
@@ -12,20 +13,22 @@ import matplotlib as plt
 # Run on pure python
 from tqdm import tqdm
 
+# Config logging format
+logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 # Config logging module to enable on notebook
-# logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 # logger = logging.getLogger()
 # logger.setLevel(logging.DEBUG)
 
 # Test GPU and show the available logical & physical GPUs
 Util.test_gpu()
 
-env = cartPole.CartPoleEnv()
-env.reset()
+# Block any pop-up windows
+os.environ['SDL_VIDEODRIVER'] = 'dummy'
+
+env = flappyBird.FlappyBirdEnv()
 NUM_STATE_FEATURES = env.get_num_state_features()
 NUM_ACTIONS = env.get_num_actions()
-BATCH_SIZE = 32
-EPISODE_NUM = 20
+EPISODE_NUM = 20000
 PRINT_EVERY_EPISODE = 20
 LEARNING_RATE = 1e-4
 REWARD_DISCOUNT = 0.9
@@ -33,7 +36,7 @@ REWARD_DISCOUNT = 0.9
 exp_stg = EPSG.EpsilonGreedy(0.1, NUM_ACTIONS)
 agent = REINFORCE.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg)
 
-state = env.get_state()
+state = env.reset()
 
 accum_reward = 0
 bar = []
@@ -66,10 +69,10 @@ for episode in range(1, EPISODE_NUM + 1):
     bar.update(1)        
     env.reset()
 
+# Close tqdm progress bar
 bar.close()    
 logging.info("Accumulated Reward: {} | Loss: {}".format(round(accum_reward / PRINT_EVERY_EPISODE), agent.get_metrics_loss()))
 agent.reset_metrics_loss()
-
 
 # Evaluate the model
 agent.shutdown_explore()
