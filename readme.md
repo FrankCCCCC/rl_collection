@@ -3,7 +3,9 @@
 > 
 > REINFORCE
 > 
-> AC
+> A2C
+> 
+> A3C
 > 
 > DDPG
 > 

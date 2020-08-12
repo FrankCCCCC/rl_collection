@@ -43,6 +43,8 @@ class Agent:
         gt = np.zeros(num_reward)
         for i in range(num_reward):
             gt[i] = np.sum(np.multiply(np_rewards[i:], discounts[:num_reward - i]))
+            
+        # Normalize the rewards
         gt = (gt - np.mean(gt)) / (np.std(gt) + 1e-9)
 
         predicts = self.predict(states)
@@ -96,18 +98,6 @@ class Agent:
         self.iter += 1
 
         return loss
-    
-    def preprocess_state(self, env_state):
-        # Preprocess SINGLE state
-        return list(env_state.values())
-
-    def preprocess_states(self, env_states):
-        # Preprocess MULTIPLE states
-        state_list = []
-        for env_state in env_states:
-            state_list.append(list(env_state.values()))
-
-        return state_list
 
     def reset_buffer(self):
         # Init & Reset buffer
