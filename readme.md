@@ -26,4 +26,7 @@ Reference:
 - [Deep Reinforcement Learning: Playing CartPole through Asynchronous Advantage Actor Critic (A3C) with tf.keras and eager execution](https://blog.tensorflow.org/2018/07/deep-reinforcement-learning-keras-eager-execution.html)
 
 - [flappy bird REINFORCE](https://github.com/GordonCai/project-deep-reinforcement-learning-with-policy-gradient/blob/master/Code/PG-Pong-Gordon-ANN-1.ipynb)
+- 
 - [kevin-fang/reinforced-flappy-bird](https://github.com/kevin-fang/reinforced-flappy-bird/blob/master/tf_graph.py)
+- 
+- [Tensorflow 2.0 Pitfalls](http://blog.ai.ovgu.de/posts/jens/2019/001_tf20_pitfalls/index.html)
