@@ -17,8 +17,8 @@ from tqdm import tqdm
 # Config Logging format
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 # Config logging module to enable on notebook
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+# logger = logging.getLogger()
+# logger.setLevel(logging.DEBUG)
 
 # Test GPU and show the available logical & physical GPUs
 Util.test_gpu()
@@ -26,10 +26,10 @@ Util.test_gpu()
 env = cartPole.CartPoleEnv()
 NUM_STATE_FEATURES = env.get_num_state_features()
 NUM_ACTIONS = env.get_num_actions()
-EPISODE_NUM = 30000
+EPISODE_NUM = 200
 PRINT_EVERY_EPISODE = 20
-LEARNING_RATE = 2e-4
-REWARD_DISCOUNT = 0.9
+LEARNING_RATE = 0.01
+REWARD_DISCOUNT = 0.99
 
 exp_stg = EPSG.EpsilonGreedy(0.2, NUM_ACTIONS)
 agent = A2C.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg)
@@ -54,10 +54,9 @@ for episode in range(1, EPISODE_NUM + 1):
 
     while not env.is_over():
         # env.render()
-        action, model_output = agent.select_action(state)
-        print(model_output)
+        action, act_log_prob, value = agent.select_action(state)
         state_prime, reward, is_done, info = env.act(action)
-        agent.add_buffer(state, action, reward, state_prime, model_output)
+        agent.add_buffer(state, action, reward, state_prime, act_log_prob, value)
         # print(f'State: {state}, Action: {action}, Reward: {reward}, State_Prime: {state_prime}')
 
         state = state_prime
@@ -66,7 +65,10 @@ for episode in range(1, EPISODE_NUM + 1):
 
     loss = agent.update()
     agent.reset_buffer()
+    # episode_reward = agent.train_on_env(env)
+    # accum_reward += episode_reward
     r_his.append(episode_reward)
+    
     episode_reward = 0
 
     bar.update(1)        
@@ -85,7 +87,7 @@ accum_reward = 0
 
 while not env.is_over():
     # env.render()
-    action = agent.select_action(state)
+    action, act_log_prob, value = agent.select_action(state)
     state_prime, reward, is_done, info = env.act(action)
 
     state = state_prime
@@ -101,4 +103,4 @@ plt.plot(r_his, color='blue')
 # plt.plot(loss_his, color='red')
 plt.xlabel('Episodes')
 plt.ylabel('Avg-Accumulate Rewards')
-plt.savefig('cartPole-REINFORCE-res.svg')
+plt.savefig('cartPole-A2C-res.svg')

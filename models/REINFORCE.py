@@ -45,7 +45,7 @@ class Agent:
             gt[i] = np.sum(np.multiply(np_rewards[i:], discounts[:num_reward - i]))
             
         # Normalize the rewards
-        gt = (gt - np.mean(gt)) / (np.std(gt) + 1e-9)
+        gt = (gt - tf.math.reduce_mean(gt)) / (tf.math.reduce_std(gt) + 1e-9)
 
         predicts = self.predict(states)
         

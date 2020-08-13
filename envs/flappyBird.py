@@ -8,7 +8,8 @@ class FlappyBirdEnv:
         self.env = PLE(self.game, fps=self.fps, display_screen=False)  # environment interface to game
         self.env.reset_game()
 
-    def reset(self):
+    def reset(self, is_show = False):
+        self.env = PLE(self.game, fps=self.fps, display_screen=is_show)  # environment interface to game
         self.env.reset_game()
         state = self.get_state()
 
