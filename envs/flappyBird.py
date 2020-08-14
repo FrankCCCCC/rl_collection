@@ -39,7 +39,34 @@ class FlappyBirdEnv:
         return len(self.game.getGameState())
 
     def get_state(self):
-        return list(self.game.getGameState().values())
+        # dict
+        #     * player y position.
+        #     * players velocity.
+        #     * next pipe distance to player
+        #     * next pipe top y position
+        #     * next pipe bottom y position
+        #     * next next pipe distance to player
+        #     * next next pipe top y position
+        #     * next next pipe bottom y position
+
+        # state = {
+        #     "player_y": self.player.pos_y,
+        #     "player_vel": self.player.vel,
+            
+        #     "next_pipe_dist_to_player": next_pipe.x - self.player.pos_x,
+        #     "next_pipe_top_y": next_pipe.gap_start,
+        #     "next_pipe_bottom_y": next_pipe.gap_start+self.pipe_gap, 
+            
+        #     "next_next_pipe_dist_to_player": next_next_pipe.x - self.player.pos_x,
+        #     "next_next_pipe_top_y": next_next_pipe.gap_start,
+        #     "next_next_pipe_bottom_y": next_next_pipe.gap_start+self.pipe_gap 
+        # }
+        state = self.game.getGameState()
+        state['next_pipe_top_y'] -= state['player_y']
+        state['next_pipe_bottom_y'] -= state['player_y']
+        state['next_next_pipe_top_y'] -= state['player_y']
+        state['next_next_pipe_bottom_y'] -= state['player_y']
+        return list(state.values())
 
     def is_over(self):
         return self.env.game_over()
