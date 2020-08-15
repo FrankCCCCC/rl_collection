@@ -18,6 +18,26 @@ class FlappyBirdEnv:
     def act(self, action):
         # return state_prime, reward, done, info
         reward = self.env.act(self.env.getActionSet()[action])
+#         print(reward)
+        
+        # Survive reward +1
+#         reward += 1
+        
+        # Get closer to the middle of top and bottom pipe and get more reward
+#         state = self.game.getGameState()
+        
+#         next_dis_to_mid = abs((state['next_pipe_top_y'] + state['next_pipe_bottom_y']) / 2 - state['player_y'])
+#         print('State')
+#         print(state)
+#         print('Mid')
+#         print((state['next_pipe_top_y'] + state['next_pipe_bottom_y']) / 2)
+#         print('next_dis_to_mid')
+#         print(abs((state['next_pipe_top_y'] + state['next_pipe_bottom_y']) / 2 - state['player_y']))
+#         next_next_dis_to_mid = abs((state['next_next_pipe_top_y'] + state['next_next_pipe_bottom_y']) / 2 - state['player_y'])
+#         dis_reward_coef = 0.01
+        
+#         reward += dis_reward_coef * ((-next_dis_to_mid) + 0.5 * (-next_next_dis_to_mid))
+        
         state_prime = self.get_state()
         is_done = self.is_over()
         info = ""

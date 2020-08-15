@@ -3,11 +3,12 @@
 
 import models.A2C as A2C
 import models.expStrategy.epsilonGreedy as EPSG
-import envs.cartPole as CartPole
+import envs.flappyBird as FlappyBird
 import models.util as Util
 import logging
 import matplotlib.pyplot as plt
 from matplotlib.pylab import figure
+import os
 import numpy as np
 # To run tqdm on notebook, import tqdm.notebook
 # from tqdm.notebook import tqdm
@@ -20,14 +21,17 @@ from tqdm import tqdm
 # logger = logging.getLogger()
 # logger.setLevel(logging.DEBUG)
 
+# Block any pop-up windows
+os.environ['SDL_VIDEODRIVER'] = 'dummy'
+
 # Test GPU and show the available logical & physical GPUs
 Util.test_gpu()
 
-env = CartPole.CartPoleEnv()
+env = FlappyBird.FlappyBirdEnv()
 NUM_STATE_FEATURES = env.get_num_state_features()
 NUM_ACTIONS = env.get_num_actions()
-EPISODE_NUM = 400
-PRINT_EVERY_EPISODE = 20
+EPISODE_NUM = 10000
+PRINT_EVERY_EPISODE = 50
 LEARNING_RATE = 0.003
 REWARD_DISCOUNT = 0.99
 
@@ -88,12 +92,12 @@ while not env.is_over():
     accum_reward += reward
 
 print("Evaluate")
-print("Accumulated Reward: {}".format(accum_reward))
+print("Accumulated Reward: {}".format(round(accum_reward)))
 
 # Plot Reward History
 # figure(num=None, figsize=(24, 6), dpi=80)
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(24, 6), dpi=80)
-fig.suptitle(f'CartPole A2C Result (Evaluate Reward: {accum_reward})')
+fig.suptitle(f'FlappyBird A2C Result (Evaluate Reward: {round(accum_reward)})')
 x_datas = range(0, len(r_his))
 avg_x_datas = range(0, EPISODE_NUM + 1, PRINT_EVERY_EPISODE)
 
@@ -108,5 +112,5 @@ ax2.set_xlabel('Episodes')
 ax2.set_ylabel('Loss / Episode')
 ax2.grid()
 
-plt.savefig('CartPole-A2C-res.svg')
+plt.savefig('FlappyBird-A2C-res.svg')
 plt.show()
