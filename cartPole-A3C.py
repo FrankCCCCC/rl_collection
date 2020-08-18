@@ -40,9 +40,6 @@ agent_params = ((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_R
 init_local_agent_funct = lambda: A2C.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg)
 init_local_env_funct = lambda: cartPole.CartPoleEnv()
 
-# init_local_agent_funct = lambda: 3
-# init_local_env_funct = lambda: 5
-
 master = Parallel.Master(EPISODE_NUM, init_local_agent_funct, init_local_env_funct, -1)
 master.start_workers()
 
