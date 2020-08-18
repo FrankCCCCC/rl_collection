@@ -18,7 +18,7 @@ class Agent:
         # For A2C loss function coefficients
         self.coef_entropy = 0
         self.coef_value = 1
-
+        
     def build_model(self, name):
         # # Shared layers
         # nn_input = tf.keras.Input(shape = self.state_size, dtype = self.data_type)
@@ -53,7 +53,7 @@ class Agent:
 
     def predict(self, state):
         return self.model(tf.convert_to_tensor(state, self.data_type))
-
+    
     def loss(self, action_probs, critic_values, rewards):
         # Calculate accumulated reward Q(s, a) with discount
         np_rewards = np.array(rewards)
@@ -112,10 +112,10 @@ class Agent:
         self.is_shutdown_explore = True
         self.exploration_strategy.shutdown_explore()
     
-    def update(self, loss, tape):
-        gradients = tape.gradient(loss, self.model.trainable_variables)
+    def update(self, loss, tape, cal_gradient_vars, apply_gradient_vars):
+        gradients = tape.gradient(loss, cal_gradient_vars)
         # gradients = [gradients if gradients is not None else tf.zeros_like(var) for var, grad in zip(self.model.trainable_variables, gradients)]
-        self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
+        self.optimizer.apply_gradients(zip(gradients, apply_gradient_vars))
         self.avg_loss.update_state(loss)
 
         # Update exploration rate of Epsilon Greedy Strategy
@@ -124,9 +124,15 @@ class Agent:
         self.iter += 1
         self.eps += 1
 
-    def train_on_env(self, env, is_show = False):
+    def train_on_env(self, env, is_show = False, cal_gradient_vars = None, apply_gradient_vars = None):
+        # By default, update agent's own trainable variables
+        if cal_gradient_vars == None:
+            cal_gradient_vars = self.model.trainable_variables
+        if apply_gradient_vars == None:
+            apply_gradient_vars = self.model.trainable_variables
+            
         with tf.GradientTape() as tape:
-            tape.watch(self.model.trainable_variables)
+            tape.watch(cal_gradient_vars)
             episode_reward = 0
             state = env.reset(is_show)
 
@@ -150,7 +156,7 @@ class Agent:
                 rewards.append(reward)
 
             loss = self.loss(action_probs, critic_values, rewards)
-            self.update(loss, tape)
+            self.update(loss, tape, cal_gradient_vars, apply_gradient_vars)
             env.reset()
 
             return episode_reward, loss
