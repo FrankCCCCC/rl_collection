@@ -1,10 +1,11 @@
 import numpy as np
 
 class EpsilonGreedy:
-    def __init__(self, epsilon, num_action, min_epsilon = 0.01):
+    def __init__(self, epsilon, num_action, min_epsilon = 0.01, decay = 0.99):
         self.epsilon = epsilon
         self.num_action = num_action
-        self.min_epsilon = 0.01
+        self.min_epsilon = min_epsilon
+        self.decay = decay
         self.action_time = 0
 
     def select_action(self):

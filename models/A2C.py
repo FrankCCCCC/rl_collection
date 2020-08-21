@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+# import queue
 
 class Agent:
     def __init__(self, state_size, num_action, reward_discount, learning_rate, exploration_strategy):
@@ -112,11 +113,16 @@ class Agent:
         self.is_shutdown_explore = True
         self.exploration_strategy.shutdown_explore()
     
-    def update(self, loss, tape, cal_gradient_vars, apply_gradient_vars):
-        gradients = tape.gradient(loss, cal_gradient_vars)
-        # gradients = [gradients if gradients is not None else tf.zeros_like(var) for var, grad in zip(self.model.trainable_variables, gradients)]
+    def _get_gradients(self, loss, tape, cal_gradient_vars):
+        return tape.gradient(loss, cal_gradient_vars)
+    
+    def update(self, loss, gradients, apply_gradient_vars = None):
+        if apply_gradient_vars == None:
+            apply_gradient_vars = self.model.trainable_variables
+#         Worker.lock.acquire()
         self.optimizer.apply_gradients(zip(gradients, apply_gradient_vars))
         self.avg_loss.update_state(loss)
+#         Worker.lock.release()
 
         # Update exploration rate of Epsilon Greedy Strategy
         self.exploration_strategy.update_epsilon()
@@ -124,12 +130,12 @@ class Agent:
         self.iter += 1
         self.eps += 1
 
-    def train_on_env(self, env, is_show = False, cal_gradient_vars = None, apply_gradient_vars = None):
+    def train_on_env(self, env, is_show = False, cal_gradient_vars = None):
         # By default, update agent's own trainable variables
         if cal_gradient_vars == None:
             cal_gradient_vars = self.model.trainable_variables
-        if apply_gradient_vars == None:
-            apply_gradient_vars = self.model.trainable_variables
+#         if apply_gradient_vars == None:
+#             apply_gradient_vars = self.model.trainable_variables
             
         with tf.GradientTape() as tape:
             tape.watch(cal_gradient_vars)
@@ -139,6 +145,7 @@ class Agent:
             action_probs = []
             critic_values = []
             rewards = []
+            trajectory = []
 
             while not env.is_over():
                 # env.render()
@@ -147,16 +154,18 @@ class Agent:
                 act_prob = act_prob_dist[action]
                 state_prime, reward, is_done, info = env.act(action)
                 # print(f'State: {state}, Action: {action}, Reward: {reward}, State_Prime: {state_prime}')
+                
+                action_probs.append(act_prob)
+                critic_values.append(value)
+                rewards.append(reward)
+                trajectory.append({'state': state, 'action': action, 'reward': reward, 'state_prime': state_prime, 'is_done': is_done})
 
                 state = state_prime
                 episode_reward += reward
 
-                action_probs.append(act_prob)
-                critic_values.append(value)
-                rewards.append(reward)
-
             loss = self.loss(action_probs, critic_values, rewards)
-            self.update(loss, tape, cal_gradient_vars, apply_gradient_vars)
+            gradients = self._get_gradients(loss, tape, cal_gradient_vars)
+#             self.update(gradients, apply_gradient_vars)
             env.reset()
 
-            return episode_reward, loss
+            return episode_reward, loss, gradients, trajectory

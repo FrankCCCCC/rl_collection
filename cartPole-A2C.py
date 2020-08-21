@@ -1,9 +1,9 @@
-# CartPole-A2C Experiment
+# CartPole-A3C Experiment
 # 2020/08/11 SYC 
 
 import models.A2C as A2C
 import models.expStrategy.epsilonGreedy as EPSG
-import envs.cartPole as CartPole
+import envs.cartPole as cartPole
 import models.util as Util
 import logging
 import matplotlib.pyplot as plt
@@ -23,10 +23,10 @@ from tqdm import tqdm
 # Test GPU and show the available logical & physical GPUs
 Util.test_gpu()
 
-env = CartPole.CartPoleEnv()
+env = cartPole.CartPoleEnv()
 NUM_STATE_FEATURES = env.get_num_state_features()
 NUM_ACTIONS = env.get_num_actions()
-EPISODE_NUM = 400
+EPISODE_NUM = 200
 PRINT_EVERY_EPISODE = 20
 LEARNING_RATE = 0.003
 REWARD_DISCOUNT = 0.99
@@ -34,8 +34,16 @@ REWARD_DISCOUNT = 0.99
 exp_stg = EPSG.EpsilonGreedy(0.2, NUM_ACTIONS)
 agent = A2C.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg)
 
+# agent_params = ((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg)
+# init_local_agent_funct = lambda: Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg)
+# init_local_env_funct = lambda: CartPoleEnv()
+
+# master = Master(EPISODE_NUM, init_local_agent_funct, init_local_env_funct, 2)
+# master.start_workers()
+
 state = env.reset()
 accum_reward = 0
+accum_loss = 0
 
 # tqdm progress bar
 bar = []
@@ -50,31 +58,38 @@ for episode in range(1, EPISODE_NUM + 1):
     if episode % PRINT_EVERY_EPISODE == 1:
         if episode > 1:
             bar.close()
-            print("Avgerage Accumulated Reward: {} | Loss: {}".format(round(accum_reward / PRINT_EVERY_EPISODE), agent.get_metrics_loss()))
+            print("Avgerage Accumulated Reward: {} | Loss: {}".format(round(accum_reward / PRINT_EVERY_EPISODE), (accum_loss / PRINT_EVERY_EPISODE)))
             print("Episode {}".format(episode))
-            agent.reset_metrics_loss()
+#             agent.reset_metrics_loss()
+
             avg_r_his.append(round(accum_reward / PRINT_EVERY_EPISODE))
             accum_reward = 0
+            accum_loss = 0
         bar = tqdm(total = PRINT_EVERY_EPISODE)
 
-    episode_reward, episode_loss = agent.train_on_env(env)
+    episode_reward, episode_loss, episode_gradients, trajectory = agent.train_on_env(env)
+    agent.update(episode_loss, episode_gradients)
+#     curr_epi, episode_reward, episode_loss, worker_id = master.get_training_info()
     accum_reward += episode_reward
+    accum_loss += episode_loss
     r_his.append(episode_reward)
     loss_his.append(episode_loss)
     
     episode_reward = 0
+    episode_loss = 0
 
     bar.update(1)        
     env.reset()
 
 bar.close()    
-print("Accumulated Reward: {} | Loss: {}".format(round(accum_reward / PRINT_EVERY_EPISODE), agent.get_metrics_loss()))
+print("Accumulated Reward: {} | Loss: {}".format(round(accum_reward / PRINT_EVERY_EPISODE), (accum_loss / PRINT_EVERY_EPISODE)))
 avg_r_his.append(round(accum_reward / PRINT_EVERY_EPISODE))
 agent.reset_metrics_loss()
 
 # Evaluate the model
 agent.shutdown_explore()
-agent.reset_metrics_loss()
+# agent.reset_metrics_loss()
+# Worker.global_agent.shutdown_explore()
 # Reset Game
 env_state = env.reset()
 accum_reward = 0
@@ -82,6 +97,7 @@ accum_reward = 0
 while not env.is_over():
     # env.render()
     action, act_log_prob, value = agent.select_action(state)
+#     action, act_log_prob, value = Worker.global_agent.select_action(state)
     state_prime, reward, is_done, info = env.act(action)
 
     state = state_prime
