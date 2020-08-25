@@ -34,3 +34,4 @@ Reference:
 - [Ceruleanacg/Learning-Notes](https://github.com/Ceruleanacg/Learning-Notes)
 - [重拾基础 - A3C & DPPO](https://zhuanlan.zhihu.com/p/38771094)
 - [Day 23: Tensorflow 2.0: 再造訪 Distribute Strategy API](https://ithelp.ithome.com.tw/articles/10226066)
+- [tf.distribute.cluster_resolver.ClusterResolver](https://www.tensorflow.org/api_docs/python/tf/distribute/cluster_resolver/ClusterResolver)
