@@ -26,7 +26,7 @@ Util.test_gpu()
 env = cartPole.CartPoleEnv()
 NUM_STATE_FEATURES = env.get_num_state_features()
 NUM_ACTIONS = env.get_num_actions()
-EPISODE_NUM = 200
+EPISODE_NUM = 2000
 PRINT_EVERY_EPISODE = 20
 LEARNING_RATE = 0.003
 REWARD_DISCOUNT = 0.99
@@ -105,6 +105,11 @@ while not env.is_over():
 
 print("Evaluate")
 print("Accumulated Reward: {}".format(accum_reward))
+
+# Save Model
+import os
+saved_model_path = os.path.join('saved', 'a2c-cartpole')
+agent.model.save(saved_model_path)
 
 # Plot Reward History
 # figure(num=None, figsize=(24, 6), dpi=80)

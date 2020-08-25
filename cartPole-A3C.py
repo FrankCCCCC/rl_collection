@@ -128,18 +128,20 @@
 # plt.savefig('CartPole-A3C-res.svg')
 # plt.show()
 
-import models.A2C as A2C
-import models.expStrategy.epsilonGreedy as EPSG
+# import models.A2C as A2C
+# import models.expStrategy.epsilonGreedy as EPSG
 import envs.cartPole as cartPole
 import multiprocessing
 import ctypes
-import tensorflow as tf
+# import tensorflow as tf
 
 class Worker(multiprocessing.Process):
     def __init__(self, worker_id, remain_episode_num, lock, episode_result_queue, master_params, init_local_agent_funct, init_local_env_funct):
         multiprocessing.Process.__init__(self)
         import tensorflow as tf
         import numpy as np
+        import models.A2C as A2C
+        import models.expStrategy.epsilonGreedy as EPSG
         tf.compat.v1.keras.backend.set_session(tf.compat.v1.keras.backend.get_session)
         
         self.local_agent = init_local_agent_funct()
@@ -240,8 +242,12 @@ class Master:
 
 if __name__ == '__main__':   
     def la():
+        import models.A2C as A2C
+        import models.expStrategy.epsilonGreedy as EPSG
+        import envs.cartPole as cartPole
+        import multiprocessing
+        import ctypes
         import tensorflow as tf
-        import numpy as np
         
         NUM_STATE_FEATURES = env.get_num_state_features()
         NUM_ACTIONS = env.get_num_actions()
@@ -255,6 +261,7 @@ if __name__ == '__main__':
         return A2C.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg)
 
     def le():
+        import envs.cartPole as cartPole
         return cartPole.CartPoleEnv()
 
     init_local_agent_funct = la

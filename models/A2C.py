@@ -42,11 +42,11 @@ class Agent:
         # # Combine into a model
         # model = tf.keras.Model(name = name, inputs = nn_input, outputs = [actor_nn_output, critic_nn_output])
 
-        inputs = tf.keras.layers.Input(shape=self.state_size)
+        inputs = tf.keras.layers.Input(shape=self.state_size, name = 'inputs')
 #         x = tf.keras.layers.Dense(128, activation="relu")(inputs)
         common = tf.keras.layers.Dense(128, activation="relu")(inputs)
-        action = tf.keras.layers.Dense(self.num_action, activation="softmax")(common)
-        critic = tf.keras.layers.Dense(1)(common)
+        action = tf.keras.layers.Dense(self.num_action, activation="softmax", name = 'action_outputs')(common)
+        critic = tf.keras.layers.Dense(1, name = 'value_output')(common)
 
         model = tf.keras.Model(inputs=inputs, outputs=[action, critic])
 

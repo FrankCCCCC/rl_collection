@@ -30,3 +30,7 @@ Reference:
 - [kevin-fang/reinforced-flappy-bird](https://github.com/kevin-fang/reinforced-flappy-bird/blob/master/tf_graph.py)
 - 
 - [Tensorflow 2.0 Pitfalls](http://blog.ai.ovgu.de/posts/jens/2019/001_tf20_pitfalls/index.html)
+- [分布式训练（理论篇）](https://zhuanlan.zhihu.com/p/129912419)
+- [Ceruleanacg/Learning-Notes](https://github.com/Ceruleanacg/Learning-Notes)
+- [重拾基础 - A3C & DPPO](https://zhuanlan.zhihu.com/p/38771094)
+- [Day 23: Tensorflow 2.0: 再造訪 Distribute Strategy API](https://ithelp.ithome.com.tw/articles/10226066)
