@@ -382,16 +382,154 @@
 #     master.play()
 
 from multiprocessing import Process, Lock
+import tensorflow as tf
+import numpy as np
+import tensorflow.compat.v1 as tfv1
+import models.A3C as A3C
+import models.expStrategy.epsilonGreedy as EPSG
+import envs.cartPole as cartPole
+
+# @tf.function
+def tf_test(id):
+    env = cartPole.CartPoleEnv()
+    NUM_STATE_FEATURES = env.get_num_state_features()
+    NUM_ACTIONS = env.get_num_actions()
+    EPISODE_NUM = 2000
+    PRINT_EVERY_EPISODE = 20
+    LEARNING_RATE = 0.003
+    REWARD_DISCOUNT = 0.99
+    coef_value = 1
+    coef_entropy = 1
+    data_type = tf.float32
+    exp_stg = EPSG.EpsilonGreedy(0.2, NUM_ACTIONS)
+
+    def loss_func(action_probs, critic_values, rewards):
+        # Calculate accumulated reward Q(s, a) with discount
+        np_rewards = np.array(rewards)
+        num_reward = np_rewards.shape[0]
+        discounts = np.logspace(0, num_reward, base = REWARD_DISCOUNT, num = num_reward)
+        
+        q_values = np.zeros(num_reward)
+        for i in range(num_reward):
+            q_values[i] = np.sum(np.multiply(np_rewards[i:], discounts[:num_reward - i]))
+        q_values = (q_values - np.mean(q_values)) / (np.std(q_values) + 1e-9)
+
+        # Calculate the Actor Loss and Advantgage A(s, a) = Q_value(s, a) - value(s)
+        action_log_prbs = tf.math.log(action_probs)
+        advs = q_values - critic_values
+        actor_loss = -action_log_prbs * advs
+        
+        
+        # Calculate the critic loss 
+        huber = tf.keras.losses.Huber()
+        critic_loss = huber(tf.convert_to_tensor(critic_values, dtype = data_type), tf.convert_to_tensor(q_values, dtype = data_type))
+
+        # Calculate the cross entropy of action distribution
+        entropy = tf.reduce_sum(action_probs * action_log_prbs * -1)
+        
+        # Compute loss as formular: loss = Sum of a trajectory(-log(Pr(s, a| Theta)) * Advantage + coefficient of value * Value - coefficient of entropy * cross entropy of action distribution)
+        # Advantage: A(s, a) = Q_value(s, a) - value(s)
+        # The modification refer to the implement of Baseline A2C from OpenAI
+        # Update model with a trajectory Every time.
+        return tf.reduce_sum(actor_loss + coef_value * critic_loss - coef_entropy * entropy)
+
+    def get_gradients(loss, tape, cal_gradient_vars):
+        return tape.gradient(loss, cal_gradient_vars)
+
+    def select_action(model, state):
+        act_dist, value = model(tf.convert_to_tensor([state], dtype = tf.float32))
+        return tf.squeeze(tf.random.categorical(act_dist, 1)).numpy(), act_dist, value
+
+    def train_on_env(model, env, cal_gradient_vars = None, is_show = False):
+        if cal_gradient_vars == None:
+            cal_gradient_vars = model.trainable_variables
+
+        episode_reward = 0
+        state = env.reset(is_show)
+
+        action_probs = []
+        critic_values = []
+        rewards = []
+        trajectory = []
+
+        while not env.is_over():
+            # env.render()
+            with tf.GradientTape() as tape:
+                tape.watch(model.trainable_variables)
+                action, act_prob_dist, value = select_action(model, state)
+
+            action = tf.squeeze(action)
+            act_prob_dist = tf.squeeze(act_prob_dist)
+            value = tf.squeeze(value)
+
+            act_prob = tf.gather_nd(act_prob_dist, [action])
+            
+            state_prime, reward, is_done, info = env.act(action)
+            # print(f'State: {state}, Action: {action}, Reward: {reward}, State_Prime: {state_prime}')
+            
+            action_probs.append(act_prob)
+            critic_values.append(value)
+            rewards.append(reward)
+            trajectory.append({'state': state, 'action': action, 'reward': reward, 'state_prime': state_prime, 'is_done': is_done})
+
+            state = state_prime
+            episode_reward += reward
+
+        loss = 0
+        gradients = 0
+        loss = loss_func(action_probs, critic_values, rewards)
+        gradients = get_gradients(loss, tape, cal_gradient_vars)
+        env.reset()
+
+        return episode_reward, loss, gradients, trajectory
+
+    # state_size = 4
+    # num_action = 2
+    # sess = tfv1.Session()
+    config = tf.compat.v1.ConfigProto()
+    config.gpu_options.allow_growth=True   
+    # sess = tf.Session(config=config)
+    with tfv1.Session(config=config).as_default() as sess:
+        tf.compat.v1.keras.backend.set_session(sess)
+        
+        # agent = A3C.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg, sess)
+        # state = env.reset()
+        # episode_reward, episode_loss, episode_gradients, trajectory = agent.train_on_env(env)
+        # action, act_log_prob, value = agent.select_action(state)
+        # state_prime, reward, is_done, info = env.act(action)
+
+        inputs = tf.keras.layers.Input(shape=(NUM_STATE_FEATURES, ), name = 'inputs')
+        common = tf.keras.layers.Dense(128, activation="relu")(inputs)
+        action = tf.keras.layers.Dense(NUM_ACTIONS, activation="softmax", name = 'action_outputs')(common)
+        critic = tf.keras.layers.Dense(1, name = f'value_output{id}')(common)
+
+        model = tf.keras.Model(inputs=inputs, outputs=[action, critic])
+
+        # state = env.reset()
+        # act_dist, value = model(tf.convert_to_tensor([state], dtype = tf.float32))
+        # action = tf.squeeze(tf.random.categorical(act_dist, 1)).numpy()
+        # env.act(action)
+        # print(f'worker {id} act_dist: {act_dist}, value: {value}')
+        for i in range(200):
+            episode_reward, loss, gradients, trajectory = train_on_env(model, env)
+            print(f'Episode {i} Reward with worker {id}: {episode_reward}')
+
+
+
+    return episode_reward
 
 def f(l, i):
+    predict_res = tf_test(i)
+
     l.acquire()
     try:
         print('hello world', i)
+        print(f'{predict_res}')
     finally:
         l.release()
 
 if __name__ == '__main__':
     lock = Lock()
 
-    for num in range(10):
+    for num in range(2):
         Process(target=f, args=(lock, num)).start()

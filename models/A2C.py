@@ -107,7 +107,7 @@ class Agent:
 #         else:
 #             # If the index of action (return value) is != -1, act randomly    
 #             return action, act_dist, value
-        return np.random.choice(self.num_action, p=np.squeeze(act_dist)), act_dist, value
+        return np.random.choice(self.num_action, p=np.squeeze(act_dist.numpy())), act_dist, value
 
     def shutdown_explore(self):
         self.is_shutdown_explore = True
@@ -150,7 +150,7 @@ class Agent:
             while not env.is_over():
                 # env.render()
                 action, act_prob_dist, value = self.select_action(state)
-                
+
                 act_prob = act_prob_dist[action]
                 state_prime, reward, is_done, info = env.act(action)
                 # print(f'State: {state}, Action: {action}, Reward: {reward}, State_Prime: {state_prime}')

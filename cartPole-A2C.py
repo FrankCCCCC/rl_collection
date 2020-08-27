@@ -26,7 +26,7 @@ Util.test_gpu()
 env = cartPole.CartPoleEnv()
 NUM_STATE_FEATURES = env.get_num_state_features()
 NUM_ACTIONS = env.get_num_actions()
-EPISODE_NUM = 2000
+EPISODE_NUM = 200
 PRINT_EVERY_EPISODE = 20
 LEARNING_RATE = 0.003
 REWARD_DISCOUNT = 0.99
@@ -91,7 +91,7 @@ agent.shutdown_explore()
 # agent.reset_metrics_loss()
 # Worker.global_agent.shutdown_explore()
 # Reset Game
-env_state = env.reset()
+state = env.reset()
 accum_reward = 0
 
 while not env.is_over():
