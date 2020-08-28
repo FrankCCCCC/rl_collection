@@ -1,4 +1,4 @@
 {
-    "python.pythonPath": "C:\\Users\\quant\\Anaconda3\\envs\\pytorch\\python.exe",
+    "python.pythonPath": "C:\\Users\\quant\\Anaconda3\\envs\\tensorflow-gpu\\python.exe",
     "python.dataScience.jupyterServerURI": "https://localhost:8080"
 }
