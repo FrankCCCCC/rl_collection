@@ -1,6 +1,6 @@
 import socket
 
-class Remote:
+class RemoteEnv:
     def __init__(self, host = '127.0.0.1', port = 10011):
         self.is_show = False
         self.current_sate = []
