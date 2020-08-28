@@ -63,21 +63,22 @@ class Master:
             return True
         else:
             return False
-        
-        
-# env = CartPoleEnv()
-# NUM_STATE_FEATURES = env.get_num_state_features()
-# NUM_ACTIONS = env.get_num_actions()
-# EPISODE_NUM = 400
-# PRINT_EVERY_EPISODE = 20
-# LEARNING_RATE = 0.003
-# REWARD_DISCOUNT = 0.99
 
-# exp_stg = EpsilonGreedy(0.2, NUM_ACTIONS)
-# agent_params = ((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg)
+if __name__ == '__main__':  
+    pass
+    # env = CartPoleEnv()
+    # NUM_STATE_FEATURES = env.get_num_state_features()
+    # NUM_ACTIONS = env.get_num_actions()
+    # EPISODE_NUM = 400
+    # PRINT_EVERY_EPISODE = 20
+    # LEARNING_RATE = 0.003
+    # REWARD_DISCOUNT = 0.99
 
-# init_local_agent_funct = lambda : Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg)
-# init_local_env_funct = lambda : CartPoleEnv()
+    # exp_stg = EpsilonGreedy(0.2, NUM_ACTIONS)
+    # agent_params = ((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg)
 
-# master = Master(EPISODE_NUM, -1, init_local_agent_funct, init_local_env_funct)
-# master.start_workers()
+    # init_local_agent_funct = lambda : Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg)
+    # init_local_env_funct = lambda : CartPoleEnv()
+
+    # master = Master(EPISODE_NUM, -1, init_local_agent_funct, init_local_env_funct)
+    # master.start_workers()

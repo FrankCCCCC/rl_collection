@@ -386,22 +386,32 @@ import tensorflow as tf
 import numpy as np
 import tensorflow.compat.v1 as tfv1
 import models.A3C as A3C
+import models.A2C as A2C
 import models.expStrategy.epsilonGreedy as EPSG
 import envs.cartPole as cartPole
 
-# @tf.function
 def tf_test(id):
     env = cartPole.CartPoleEnv()
     NUM_STATE_FEATURES = env.get_num_state_features()
     NUM_ACTIONS = env.get_num_actions()
-    EPISODE_NUM = 2000
+    EPISODE_NUM = 200
     PRINT_EVERY_EPISODE = 20
     LEARNING_RATE = 0.003
     REWARD_DISCOUNT = 0.99
     coef_value = 1
-    coef_entropy = 1
+    coef_entropy = 0
     data_type = tf.float32
     exp_stg = EPSG.EpsilonGreedy(0.2, NUM_ACTIONS)
+
+    def build_model(self, name):
+        inputs = tf.keras.layers.Input(shape=self.state_size, name = 'inputs')
+        common = tf.keras.layers.Dense(128, activation="relu")(inputs)
+        action = tf.keras.layers.Dense(self.num_action, activation="softmax", name = 'action_outputs')(common)
+        critic = tf.keras.layers.Dense(1, name = 'value_output')(common)
+
+        model = tf.keras.Model(inputs=inputs, outputs=[action, critic])
+
+        return model
 
     def loss_func(action_probs, critic_values, rewards):
         # Calculate accumulated reward Q(s, a) with discount
@@ -414,7 +424,7 @@ def tf_test(id):
             q_values[i] = np.sum(np.multiply(np_rewards[i:], discounts[:num_reward - i]))
         q_values = (q_values - np.mean(q_values)) / (np.std(q_values) + 1e-9)
 
-        # Calculate the Actor Loss and Advantgage A(s, a) = Q_value(s, a) - value(s)
+        # Calculate the Actor Loss and Advantage A(s, a) = Q_value(s, a) - value(s)
         action_log_prbs = tf.math.log(action_probs)
         advs = q_values - critic_values
         actor_loss = -action_log_prbs * advs
@@ -436,28 +446,32 @@ def tf_test(id):
     def get_gradients(loss, tape, cal_gradient_vars):
         return tape.gradient(loss, cal_gradient_vars)
 
-    def update(self, loss, gradients, apply_gradient_vars = None):
+    def update(loss, gradients, model, apply_gradient_vars = None):
         if apply_gradient_vars == None:
             apply_gradient_vars = model.trainable_variables
-        
+
         optimizer = tf.keras.optimizers.Adam(learning_rate = LEARNING_RATE)
+        avg_loss = tf.keras.metrics.Mean(name = 'loss')
         optimizer.apply_gradients(zip(gradients, apply_gradient_vars))
+        avg_loss.update_state(loss)
 
     def select_action(model, state):
-        act_dist, value = model(tf.convert_to_tensor([state], dtype = tf.float32))
+        # Predict the probability of each action(Stochastic Policy)
+        act_dist, value = model(tf.convert_to_tensor([state], dtype = data_type))
         act_dist = tf.squeeze(act_dist)
         value = tf.squeeze(value)
         return np.random.choice(NUM_ACTIONS, p=np.squeeze(act_dist.numpy())), act_dist, value
         # return tf.squeeze(tf.random.categorical(act_dist, 1)).numpy(), act_dist, value
 
     def train_on_env(model, env, cal_gradient_vars = None, is_show = False):
+        # By default, update agent's own trainable variables
         if cal_gradient_vars == None:
             cal_gradient_vars = model.trainable_variables
-
-        apply_gradient_vars = model.trainable_variables
-
+#         if apply_gradient_vars == None:
+#             apply_gradient_vars = self.model.trainable_variables
+            
         with tf.GradientTape() as tape:
-            tape.watch(model.trainable_variables)
+            tape.watch(cal_gradient_vars)
             episode_reward = 0
             state = env.reset(is_show)
 
@@ -468,16 +482,9 @@ def tf_test(id):
 
             while not env.is_over():
                 # env.render()
-                
                 action, act_prob_dist, value = select_action(model, state)
 
-                # action = tf.squeeze(action)
-                # act_prob_dist = tf.squeeze(act_prob_dist)
-                # value = tf.squeeze(value)
-
-                # act_prob = tf.gather_nd(act_prob_dist, [action])
                 act_prob = act_prob_dist[action]
-                
                 state_prime, reward, is_done, info = env.act(action)
                 # print(f'State: {state}, Action: {action}, Reward: {reward}, State_Prime: {state_prime}')
                 
@@ -489,63 +496,54 @@ def tf_test(id):
                 state = state_prime
                 episode_reward += reward
 
-            loss = 0
-            gradients = 0
             loss = loss_func(action_probs, critic_values, rewards)
             gradients = get_gradients(loss, tape, cal_gradient_vars)
-            update(loss, gradients, apply_gradient_vars)
+#             self.update(gradients, apply_gradient_vars)
             env.reset()
 
             return episode_reward, loss, gradients, trajectory
 
-    # state_size = 4
-    # num_action = 2
-    # sess = tfv1.Session()
     config = tf.compat.v1.ConfigProto()
     config.gpu_options.allow_growth=True   
-    # sess = tf.Session(config=config)
-    # with tfv1.Session(config=config).as_default() as sess:
+    with tfv1.Session(config=config).as_default() as sess:
         # tf.compat.v1.keras.backend.set_session(sess)
         
-        # agent = A3C.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg, sess)
-        # state = env.reset()
-        # episode_reward, episode_loss, episode_gradients, trajectory = agent.train_on_env(env)
+        agent = A2C.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg)
+        state = env.reset()
+        episode_reward, episode_loss, episode_gradients, trajectory = agent.train_on_env(env)
+        for i in range(EPISODE_NUM):
+            episode_reward, loss, gradients, trajectory = agent.train_on_env(env = env, cal_gradient_vars = agent.model.trainable_variables)
+            agent.update(loss = loss, gradients = gradients)
+            print(f'Episode {i} Reward with worker {id}: {episode_reward}')
         # action, act_log_prob, value = agent.select_action(state)
         # state_prime, reward, is_done, info = env.act(action)
 
-    inputs = tf.keras.layers.Input(shape=(NUM_STATE_FEATURES, ), name = 'inputs')
-    common = tf.keras.layers.Dense(128, activation="relu")(inputs)
-    action = tf.keras.layers.Dense(NUM_ACTIONS, activation="softmax", name = 'action_outputs')(common)
-    critic = tf.keras.layers.Dense(1, name = f'value_output{id}')(common)
+        # inputs = tf.keras.layers.Input(shape=(NUM_STATE_FEATURES, ), name = 'inputs')
+        # common = tf.keras.layers.Dense(128, activation="relu")(inputs)
+        # action = tf.keras.layers.Dense(NUM_ACTIONS, activation="softmax", name = 'action_outputs')(common)
+        # critic = tf.keras.layers.Dense(1, name = f'value_output{id}')(common)
 
-    model = tf.keras.Model(inputs=inputs, outputs=[action, critic])
+        # model = tf.keras.Model(inputs=inputs, outputs=[action, critic])
 
-    # state = env.reset()
-    # act_dist, value = model(tf.convert_to_tensor([state], dtype = tf.float32))
-    # action = tf.squeeze(tf.random.categorical(act_dist, 1)).numpy()
-    # env.act(action)
-    # print(f'worker {id} act_dist: {act_dist}, value: {value}')
-    for i in range(200):
-        episode_reward, loss, gradients, trajectory = train_on_env(model, env)
-        print(f'Episode {i} Reward with worker {id}: {episode_reward}')
-
-
+        # # state = env.reset()
+        # # act_dist, value = model(tf.convert_to_tensor([state], dtype = tf.float32))
+        # # action = tf.squeeze(tf.random.categorical(act_dist, 1)).numpy()
+        # # env.act(action)
+        # # print(f'worker {id} act_dist: {act_dist}, value: {value}')
+        # for i in range(EPISODE_NUM):
+        #     episode_reward, loss, gradients, trajectory = train_on_env(model = model, env = env, cal_gradient_vars = model.trainable_variables)
+        #     update(loss = loss, gradients = gradients, model = model, apply_gradient_vars = model.trainable_variables)
+        #     print(f'Episode {i} Reward with worker {id}: {episode_reward}')
 
     return episode_reward
 
-def f(l, i):
+def f(i, lock):
     predict_res = tf_test(i)
 
-    l.acquire()
-    try:
-        print('hello world', i)
-        print(f'{predict_res}')
-    finally:
-        l.release()
+    print('hello world', i)
+    print(f'{predict_res}')
 
 if __name__ == '__main__':
     lock = Lock()
-    f(lock, 1)
-
-    # for num in range(2):
-    #     Process(target=f, args=(lock, num)).start()
+    for num in range(2):
+        Process(target=f, args=(num, lock)).start()
