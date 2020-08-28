@@ -436,52 +436,67 @@ def tf_test(id):
     def get_gradients(loss, tape, cal_gradient_vars):
         return tape.gradient(loss, cal_gradient_vars)
 
+    def update(self, loss, gradients, apply_gradient_vars = None):
+        if apply_gradient_vars == None:
+            apply_gradient_vars = model.trainable_variables
+        
+        optimizer = tf.keras.optimizers.Adam(learning_rate = LEARNING_RATE)
+        optimizer.apply_gradients(zip(gradients, apply_gradient_vars))
+
     def select_action(model, state):
         act_dist, value = model(tf.convert_to_tensor([state], dtype = tf.float32))
-        return tf.squeeze(tf.random.categorical(act_dist, 1)).numpy(), act_dist, value
+        act_dist = tf.squeeze(act_dist)
+        value = tf.squeeze(value)
+        return np.random.choice(NUM_ACTIONS, p=np.squeeze(act_dist.numpy())), act_dist, value
+        # return tf.squeeze(tf.random.categorical(act_dist, 1)).numpy(), act_dist, value
 
     def train_on_env(model, env, cal_gradient_vars = None, is_show = False):
         if cal_gradient_vars == None:
             cal_gradient_vars = model.trainable_variables
 
-        episode_reward = 0
-        state = env.reset(is_show)
+        apply_gradient_vars = model.trainable_variables
 
-        action_probs = []
-        critic_values = []
-        rewards = []
-        trajectory = []
+        with tf.GradientTape() as tape:
+            tape.watch(model.trainable_variables)
+            episode_reward = 0
+            state = env.reset(is_show)
 
-        while not env.is_over():
-            # env.render()
-            with tf.GradientTape() as tape:
-                tape.watch(model.trainable_variables)
+            action_probs = []
+            critic_values = []
+            rewards = []
+            trajectory = []
+
+            while not env.is_over():
+                # env.render()
+                
                 action, act_prob_dist, value = select_action(model, state)
 
-            action = tf.squeeze(action)
-            act_prob_dist = tf.squeeze(act_prob_dist)
-            value = tf.squeeze(value)
+                # action = tf.squeeze(action)
+                # act_prob_dist = tf.squeeze(act_prob_dist)
+                # value = tf.squeeze(value)
 
-            act_prob = tf.gather_nd(act_prob_dist, [action])
-            
-            state_prime, reward, is_done, info = env.act(action)
-            # print(f'State: {state}, Action: {action}, Reward: {reward}, State_Prime: {state_prime}')
-            
-            action_probs.append(act_prob)
-            critic_values.append(value)
-            rewards.append(reward)
-            trajectory.append({'state': state, 'action': action, 'reward': reward, 'state_prime': state_prime, 'is_done': is_done})
+                # act_prob = tf.gather_nd(act_prob_dist, [action])
+                act_prob = act_prob_dist[action]
+                
+                state_prime, reward, is_done, info = env.act(action)
+                # print(f'State: {state}, Action: {action}, Reward: {reward}, State_Prime: {state_prime}')
+                
+                action_probs.append(act_prob)
+                critic_values.append(value)
+                rewards.append(reward)
+                trajectory.append({'state': state, 'action': action, 'reward': reward, 'state_prime': state_prime, 'is_done': is_done})
 
-            state = state_prime
-            episode_reward += reward
+                state = state_prime
+                episode_reward += reward
 
-        loss = 0
-        gradients = 0
-        loss = loss_func(action_probs, critic_values, rewards)
-        gradients = get_gradients(loss, tape, cal_gradient_vars)
-        env.reset()
+            loss = 0
+            gradients = 0
+            loss = loss_func(action_probs, critic_values, rewards)
+            gradients = get_gradients(loss, tape, cal_gradient_vars)
+            update(loss, gradients, apply_gradient_vars)
+            env.reset()
 
-        return episode_reward, loss, gradients, trajectory
+            return episode_reward, loss, gradients, trajectory
 
     # state_size = 4
     # num_action = 2
@@ -489,8 +504,8 @@ def tf_test(id):
     config = tf.compat.v1.ConfigProto()
     config.gpu_options.allow_growth=True   
     # sess = tf.Session(config=config)
-    with tfv1.Session(config=config).as_default() as sess:
-        tf.compat.v1.keras.backend.set_session(sess)
+    # with tfv1.Session(config=config).as_default() as sess:
+        # tf.compat.v1.keras.backend.set_session(sess)
         
         # agent = A3C.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg, sess)
         # state = env.reset()
@@ -498,21 +513,21 @@ def tf_test(id):
         # action, act_log_prob, value = agent.select_action(state)
         # state_prime, reward, is_done, info = env.act(action)
 
-        inputs = tf.keras.layers.Input(shape=(NUM_STATE_FEATURES, ), name = 'inputs')
-        common = tf.keras.layers.Dense(128, activation="relu")(inputs)
-        action = tf.keras.layers.Dense(NUM_ACTIONS, activation="softmax", name = 'action_outputs')(common)
-        critic = tf.keras.layers.Dense(1, name = f'value_output{id}')(common)
+    inputs = tf.keras.layers.Input(shape=(NUM_STATE_FEATURES, ), name = 'inputs')
+    common = tf.keras.layers.Dense(128, activation="relu")(inputs)
+    action = tf.keras.layers.Dense(NUM_ACTIONS, activation="softmax", name = 'action_outputs')(common)
+    critic = tf.keras.layers.Dense(1, name = f'value_output{id}')(common)
 
-        model = tf.keras.Model(inputs=inputs, outputs=[action, critic])
+    model = tf.keras.Model(inputs=inputs, outputs=[action, critic])
 
-        # state = env.reset()
-        # act_dist, value = model(tf.convert_to_tensor([state], dtype = tf.float32))
-        # action = tf.squeeze(tf.random.categorical(act_dist, 1)).numpy()
-        # env.act(action)
-        # print(f'worker {id} act_dist: {act_dist}, value: {value}')
-        for i in range(200):
-            episode_reward, loss, gradients, trajectory = train_on_env(model, env)
-            print(f'Episode {i} Reward with worker {id}: {episode_reward}')
+    # state = env.reset()
+    # act_dist, value = model(tf.convert_to_tensor([state], dtype = tf.float32))
+    # action = tf.squeeze(tf.random.categorical(act_dist, 1)).numpy()
+    # env.act(action)
+    # print(f'worker {id} act_dist: {act_dist}, value: {value}')
+    for i in range(200):
+        episode_reward, loss, gradients, trajectory = train_on_env(model, env)
+        print(f'Episode {i} Reward with worker {id}: {episode_reward}')
 
 
 
@@ -530,6 +545,7 @@ def f(l, i):
 
 if __name__ == '__main__':
     lock = Lock()
+    f(lock, 1)
 
-    for num in range(2):
-        Process(target=f, args=(lock, num)).start()
+    # for num in range(2):
+    #     Process(target=f, args=(lock, num)).start()
