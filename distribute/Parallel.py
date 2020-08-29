@@ -16,7 +16,8 @@ class Worker(threading.Thread):
     def run(self):
         while Worker.remain_episode_num > 0:
             self.env.reset()
-            episode_reward, loss = self.local_agent.train_on_env(self.env, is_show = False, cal_gradient_vars = self.local_agent.model.trainable_variables, apply_gradient_vars = Worker.global_agent.model.trainable_variables)
+            episode_reward, loss = self.local_agent.train_on_env(env = self.env, is_show = False, cal_gradient_vars = self.local_agent.model.trainable_variables)
+            self.local_agent.update(loss = loss, gradients = gradients, apply_gradient_vars = Worker.global_agent.model.trainable_variables)
             self.local_agent.model.set_weights(Worker.global_agent.model.get_weights())
             
             with Worker.lock:
