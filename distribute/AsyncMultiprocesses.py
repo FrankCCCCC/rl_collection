@@ -3,6 +3,10 @@ import multiprocessing
 # import numpy as np
 # import queue
 
+class ParamServer(multiprocessing.Process):
+    def __init__(self):
+        multiprocessing.Process.__init__(self)
+
 class Worker(multiprocessing.Process):
     def __init__(self, worker_id, local_agent, local_env):
         multiprocessing.Process.__init__(self)

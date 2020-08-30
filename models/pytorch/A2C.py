@@ -12,7 +12,7 @@ class Agent:
         self.eps = 0
         self.is_shutdown_explore = False
 
-        self.data_type = tf.float32
+        self.data_type = torch.float32
         self.optimizer = tf.keras.optimizers.Adam(learning_rate = learning_rate)
         self.avg_loss = tf.keras.metrics.Mean(name = 'loss')
         self.model = self.build_model('model')
