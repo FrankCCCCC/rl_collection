@@ -41,20 +41,27 @@ def make_cluster_config(ps_num, worker_num, host = 'localhost', base_port = 8000
     
     return cluster_config
 
-def param_server(proc_id, ps_id, global_remain_episode, global_alive_workers, global_grad_queue, global_var_queues, cluster_spec):
+def get_res(global_res_queue, global_alive_workers):
+    while ((not global_res_queue.empty()) or (global_alive_workers.value > 0)):
+        res = global_res_queue.get()
+        
+
+def param_server(proc_id, ps_id, global_remain_episode, global_alive_workers, global_grad_queue, global_var_queues):
     # server = tf.distribute.Server(cluster_spec, role, role_index)
     # with tf.device("/job:ps/task:0"):
     #     server.join()
-    local_env = cartPole.CartPoleEnv()
-    NUM_STATE_FEATURES = local_env.get_num_state_features()
-    NUM_ACTIONS = local_env.get_num_actions()
-    EPISODE_NUM = 20
-    PRINT_EVERY_EPISODE = 20
-    LEARNING_RATE = 0.003
-    REWARD_DISCOUNT = 0.99
-    data_type = tf.float32
-    exp_stg = EPSG.EpsilonGreedy(0.2, NUM_ACTIONS)
-    global_agent = A2C.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg)
+    # local_env = cartPole.CartPoleEnv()
+    # NUM_STATE_FEATURES = local_env.get_num_state_features()
+    # NUM_ACTIONS = local_env.get_num_actions()
+    # EPISODE_NUM = 20
+    # PRINT_EVERY_EPISODE = 20
+    # LEARNING_RATE = 0.003
+    # REWARD_DISCOUNT = 0.99
+    # data_type = tf.float32
+    # exp_stg = EPSG.EpsilonGreedy(0.2, NUM_ACTIONS)
+    # global_agent = A2C.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg)
+
+    global_agent, env = init_agent_env()
 
     # config = tf.compat.v1.ConfigProto()
     # config.gpu_options.allow_growth=True   
@@ -81,19 +88,21 @@ def param_server(proc_id, ps_id, global_remain_episode, global_alive_workers, gl
                 queue.get()
                 # print(f'Clear vars in queue for worker')
 
-def worker(proc_id, worker_id, lock, global_remain_episode, global_alive_workers, global_grad_queue, global_var_queue, cluster_spec):
+def worker(proc_id, worker_id, global_remain_episode, global_alive_workers, global_res_queue, global_grad_queue, global_var_queue):
     print(f'Process {proc_id} Worker {worker_id} start')
 
-    local_env = cartPole.CartPoleEnv()
-    NUM_STATE_FEATURES = local_env.get_num_state_features()
-    NUM_ACTIONS = local_env.get_num_actions()
-    EPISODE_NUM = 20
-    PRINT_EVERY_EPISODE = 20
-    LEARNING_RATE = 0.003
-    REWARD_DISCOUNT = 0.99
-    data_type = tf.float32
-    exp_stg = EPSG.EpsilonGreedy(0.2, NUM_ACTIONS)
-    local_agent = A2C.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg)
+    # local_env = cartPole.CartPoleEnv()
+    # NUM_STATE_FEATURES = local_env.get_num_state_features()
+    # NUM_ACTIONS = local_env.get_num_actions()
+    # EPISODE_NUM = 20
+    # PRINT_EVERY_EPISODE = 20
+    # LEARNING_RATE = 0.003
+    # REWARD_DISCOUNT = 0.99
+    # data_type = tf.float32
+    # exp_stg = EPSG.EpsilonGreedy(0.2, NUM_ACTIONS)
+    # local_agent = A2C.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg)
+
+    local_agent, local_env = init_agent_env()
 
     # config = tf.compat.v1.ConfigProto()
     # config.gpu_options.allow_growth=True   
@@ -107,6 +116,7 @@ def worker(proc_id, worker_id, lock, global_remain_episode, global_alive_workers
             # local_agent.update(loss = loss, gradients = gradients)
             print(f'Episode {global_remain_episode.value} Reward with process {worker_id}: {episode_reward}')
 
+            global_res_queue.put({'loss': loss, 'reward': episode_reward, 'worker_id': worker_id})
             global_grad_queue.put({'loss': loss, 'gradients': gradients, 'worker_id': worker_id})
             if not global_var_queue.empty():
                 global_vars = global_var_queue.get()
@@ -118,17 +128,16 @@ def worker(proc_id, worker_id, lock, global_remain_episode, global_alive_workers
 
     with global_alive_workers.get_lock():
         global_alive_workers.value -= 1
-            # lock.acquire()
-            # lock.release()
 
 
 if __name__ == '__main__':
-    EPISODE_NUM = 250
+    EPISODE_NUM = 20
     ps_num = 1
     worker_num = 2
-    global_lock = Lock()
+    # global_lock = Lock()
     global_remain_episode = Value('i', EPISODE_NUM)
     global_alive_workers = Value('i', worker_num)
+    global_res_queue = Queue()
     global_grad_queue = Queue()
     global_var_queues = [Queue(1) for i in range(worker_num)]
     cluster_config = make_cluster_config(ps_num, worker_num)
@@ -139,10 +148,10 @@ if __name__ == '__main__':
     cluster_spec = tf.train.ClusterSpec(cluster_config)
     
     for ps_id in range(ps_num):
-        pss.append(Process(target=param_server, args=(ps_id, ps_id, global_remain_episode, global_alive_workers, global_grad_queue, global_var_queues, cluster_spec)))
+        pss.append(Process(target=param_server, args=(ps_id, ps_id, global_remain_episode, global_alive_workers, global_grad_queue, global_var_queues)))
 
     for worker_id in range(worker_num):
-        workers.append(Process(target=worker, args=(worker_id + ps_num, worker_id, global_lock, global_remain_episode, global_alive_workers, global_grad_queue, global_var_queues[worker_id], cluster_spec)))
+        workers.append(Process(target=worker, args=(worker_id + ps_num, worker_id, global_remain_episode, global_alive_workers, global_res_queue, global_grad_queue, global_var_queues[worker_id])))
 
     for num in range(ps_num):
         pss[num].start()
