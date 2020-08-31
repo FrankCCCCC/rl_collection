@@ -3,17 +3,20 @@ import os
 import ctypes
 import tensorflow as tf
 import numpy as np
-import tensorflow.compat.v1 as tfv1
+# import tensorflow.compat.v1 as tfv1
 import models.A2C as A2C
 import models.expStrategy.epsilonGreedy as EPSG
 import envs.cartPole as cartPole
+import envs.flappyBird as flappyBird
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["SDL_VIDEODRIVER"] = "dummy"
 tf.config.set_soft_device_placement(True)
 
 def init_agent_env():
-    env = cartPole.CartPoleEnv()
+    # env = cartPole.CartPoleEnv()
+    env = flappyBird.FlappyBirdEnv()
     NUM_STATE_FEATURES = env.get_num_state_features()
     NUM_ACTIONS = env.get_num_actions()
     PRINT_EVERY_EPISODE = 20
