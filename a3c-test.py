@@ -1,4 +1,5 @@
 from multiprocessing import Process, Lock, Value, Array, Queue
+import os
 import ctypes
 import tensorflow as tf
 import numpy as np
@@ -7,6 +8,8 @@ import models.A2C as A2C
 import models.expStrategy.epsilonGreedy as EPSG
 import envs.cartPole as cartPole
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["OMP_NUM_THREADS"] = "1"
 tf.config.set_soft_device_placement(True)
 
 def init_agent_env():
@@ -18,7 +21,6 @@ def init_agent_env():
     REWARD_DISCOUNT = 0.99
     coef_value = 1
     coef_entropy = 0
-    data_type = tf.float32
     exp_stg = EPSG.EpsilonGreedy(0.2, NUM_ACTIONS)
     agent = A2C.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg)
 
@@ -48,26 +50,27 @@ def get_res(global_res_queue, global_alive_workers):
 
 def param_server(proc_id, ps_id, global_remain_episode, global_alive_workers, global_grad_queue, global_var_queues):
     # server = tf.distribute.Server(cluster_spec, 'ps', ps_id)
-    # with tf.device("/job:ps/task:0"):
-    #     server.join()
-
-    global_agent, env = init_agent_env()
 
     # config = tf.compat.v1.ConfigProto()
     # config.gpu_options.allow_growth=True   
     # with tfv1.Session(target = server.target, config=config).as_default() as sess:
     # with tf.device("/job:localhost/replica:0/task:0/device:CPU:0"):
+
+    # gpus = tf.config.experimental.list_physical_devices('GPU')
+    # tf.config.experimental.set_memory_growth(gpus[0], True)
     with tf.device("/CPU:0"):
+        global_agent, env = init_agent_env()
+
         while ((not global_grad_queue.empty()) or (global_alive_workers.value > 0)):
-            print(f'Getting gradients from queue')
+#             print(f'Getting gradients from queue')
             item = global_grad_queue.get()
             global_agent.update(loss = item['loss'], gradients = item['gradients'])
 
             weights = global_agent.model.get_weights()
-            for queue in global_var_queues:
-                if not queue.full():
-                    queue.put(weights)
-                    print(f'Put vars in queue for worker')
+            for i in range(len(global_var_queues)):
+                if not global_var_queues[i].full():
+                    global_var_queues[i].put(weights)
+#                     print(f'Put vars in queue for worker {i}')
         
         print("Complete PS apply")
         for queue in global_var_queues:
@@ -79,13 +82,15 @@ def worker(proc_id, worker_id, global_remain_episode, global_alive_workers, glob
     # server = tf.distribute.Server(cluster_spec, 'worker', worker_id)
     print(f'Process {proc_id} Worker {worker_id} start')
 
-    local_agent, local_env = init_agent_env()
-
     # config = tf.compat.v1.ConfigProto()
     # config.gpu_options.allow_growth=True   
     # with tfv1.Session(target = server.target, config=config).as_default() as sess:
     # with tf.device("/job:localhost/replica:0/task:0/device:CPU:0"):
+
+    # gpus = tf.config.experimental.list_physical_devices('GPU')
+    # tf.config.experimental.set_memory_growth(gpus[0], True)
     with tf.device("/CPU:0"):
+        local_agent, local_env = init_agent_env()
         state = local_env.reset()
         while global_remain_episode.value > 0:
             episode_reward, loss, gradients, trajectory = local_agent.train_on_env(env = local_env, cal_gradient_vars = None)
@@ -96,7 +101,7 @@ def worker(proc_id, worker_id, global_remain_episode, global_alive_workers, glob
             if not global_var_queue.empty():
                 global_vars = global_var_queue.get()
                 local_agent.model.set_weights(global_vars)
-                print(f'Worker {worker_id} Update Weights')
+#                 print(f'Worker {worker_id} Update Weights')
 
             with global_remain_episode.get_lock():
                 global_remain_episode.value -= 1
@@ -111,9 +116,9 @@ if __name__ == '__main__':
     # print(tf.config.experimental.list_physical_devices(device_type=None))
     # print(tf.config.experimental.list_logical_devices(device_type=None))
 
-    EPISODE_NUM = 100
+    EPISODE_NUM = 300
     ps_num = 1
-    worker_num = 1
+    worker_num = 2
     global_remain_episode = Value('i', EPISODE_NUM)
     global_alive_workers = Value('i', worker_num)
     # global_res_queue = Queue()

@@ -113,7 +113,7 @@ class Agent:
         self.is_shutdown_explore = True
         self.exploration_strategy.shutdown_explore()
     
-    def _get_gradients(self, loss, tape, cal_gradient_vars):
+    def __get_gradients(self, loss, tape, cal_gradient_vars):
         return tape.gradient(loss, cal_gradient_vars)
     
     def update(self, loss, gradients, apply_gradient_vars = None):
@@ -164,7 +164,7 @@ class Agent:
                 episode_reward += reward
 
             loss = self.loss(action_probs, critic_values, rewards)
-            gradients = self._get_gradients(loss, tape, cal_gradient_vars)
+            gradients = self.__get_gradients(loss, tape, cal_gradient_vars)
 #             self.update(gradients, apply_gradient_vars)
             env.reset()
 
