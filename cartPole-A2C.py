@@ -2,7 +2,7 @@
 # 2020/08/11 SYC 
 
 import models.A2C as A2C
-import models.expStrategy.epsilonGreedy as EPSG
+import models.expStrategy.EpsilonGreedy as EPSG
 import envs.cartPole as cartPole
 import models.util as Util
 import logging
@@ -30,9 +30,11 @@ EPISODE_NUM = 200
 PRINT_EVERY_EPISODE = 20
 LEARNING_RATE = 0.003
 REWARD_DISCOUNT = 0.99
+COEF_VALUE= 1
+COEF_ENTROPY = 0
 
 exp_stg = EPSG.EpsilonGreedy(0.2, NUM_ACTIONS)
-agent = A2C.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg)
+agent = A2C.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, COEF_VALUE, COEF_ENTROPY)
 
 # agent_params = ((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg)
 # init_local_agent_funct = lambda: Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, exp_stg)

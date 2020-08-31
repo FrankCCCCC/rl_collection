@@ -41,3 +41,5 @@ Reference:
 - [How to run Keras.model() for prediction inside a tensorflow session?](https://stackoverflow.com/questions/50269901/how-to-run-keras-model-for-prediction-inside-a-tensorflow-session)
 - [Day 23: Tensorflow 2.0: 再造訪 Distribute Strategy API](https://ithelp.ithome.com.tw/articles/10226066)
 - [[第 27 天] 深度學習 TensorFlow](https://ithelp.ithome.com.tw/articles/10187702)
+- [一句一句读Pytorch（更新中）](https://zhuanlan.zhihu.com/p/29916596)
+- [并行处理最佳实践](https://pytorch.apachecn.org/docs/1.4/64.html)

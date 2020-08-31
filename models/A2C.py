@@ -3,7 +3,7 @@ import numpy as np
 # import queue
 
 class Agent:
-    def __init__(self, state_size, num_action, reward_discount, learning_rate, exploration_strategy):
+    def __init__(self, state_size, num_action, reward_discount = 0.99, learning_rate = 0.003, coef_value = 1, coef_entropy = 0, exploration_strategy = None):
         self.state_size = state_size
         self.num_action = num_action
         self.reward_discount = reward_discount
@@ -17,8 +17,8 @@ class Agent:
         self.is_shutdown_explore = False
 
         # For A2C loss function coefficients
-        self.coef_entropy = 0
-        self.coef_value = 1
+        self.coef_entropy = coef_entropy
+        self.coef_value = coef_value
         
     def build_model(self, name):
         # # Shared layers
@@ -97,21 +97,18 @@ class Agent:
         act_dist = tf.squeeze(act_dist)
         value = tf.squeeze(value)
         # Assume using Epsilon Greedy Strategy
-        action = self.exploration_strategy.select_action()
+        if self.exploration_strategy != None:
+            action = self.exploration_strategy.select_action(act_dist.numpy())
+        else:
+            action = np.random.choice(self.num_action, p=np.squeeze(act_dist.numpy()))
         
-        # If the index of action (return value) is -1, choose the action with highest probability that model predict
-#         if action == -1 or self.shutdown_explore == True:
-#             # Pick then action with HIGHTEST probability
-#             act_idx = tf.argmax(act_dist, axis = 0).numpy()
-#             return act_idx, act_dist, value
-#         else:
-#             # If the index of action (return value) is != -1, act randomly    
-#             return action, act_dist, value
-        return np.random.choice(self.num_action, p=np.squeeze(act_dist.numpy())), act_dist, value
+        return action, act_dist, value
 
     def shutdown_explore(self):
         self.is_shutdown_explore = True
-        self.exploration_strategy.shutdown_explore()
+
+        if self.exploration_strategy != None:
+            self.exploration_strategy.shutdown_explore()
     
     def __get_gradients(self, loss, tape, cal_gradient_vars):
         return tape.gradient(loss, cal_gradient_vars)
@@ -125,7 +122,8 @@ class Agent:
 #         Worker.lock.release()
 
         # Update exploration rate of Epsilon Greedy Strategy
-        self.exploration_strategy.update_epsilon()
+        if self.exploration_strategy != None:
+            self.exploration_strategy.update_epsilon()
 
         self.iter += 1
         self.eps += 1
