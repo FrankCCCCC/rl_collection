@@ -8,6 +8,11 @@
 
 在本文中，我們會著重在於A3C 在Tensorflow的實作上，尤其是各種奇怪的坑，如果要深究Actor-Critic和A3C的原理的話，推薦這幾篇：
 
+
+- [Deriving Policy Gradients and Implementing REINFORCE](https://medium.com/@thechrisyoon/deriving-policy-gradients-and-implementing-reinforce-f887949bd63)
+  
+- [当我们在谈论 DRL：从AC、PG 到 A3C、DDPG](https://zhuanlan.zhihu.com/p/36506567)
+
 ## Problems
 
 經過漫長踩坑之旅後，終於用TF 2.0 + Multiprocessing 實作出A3C，大致上可以整理出三個重點
@@ -26,7 +31,21 @@
 
 ## Problem2: Use ```with tf.device()``` to specify the wanted device
 
-在很多TF 1.x的A3C實作，可以看到都用了```server = tf.train.server```這個API，然後在每個Worker的Session會用```tf.Session(target = server.target)```，給不同Worker指定不同的計算資源，但TF2.0移除了```tf.Session```，如果直接在新Process呼叫Tensorflow的API的話，就會出現BLEM的Error，所以如果要只用TF 2.0的API指定計算資源的話，就可以用```tf.device()```完成。
+在很多TF 1.x的A3C實作，可以看到都用了```server = tf.train.server```這個API，然後在每個Worker的Session會用```tf.Session(target = server.target)```，給不同Worker指定不同的計算資源，但TF2.0移除了```tf.Session```，如果直接在新Process呼叫Tensorflow的API的話，就會出現Blas GEMM的Error，所以如果要只用TF 2.0的API指定計算資源的話，就可以用```tf.device()```完成。
+
+另外，Blas GEMM的錯誤，可以用限制Tesorflow占用的GPU memory解決
+```
+tf_config = tf.ConfigProto()
+tf_config.gpu_options.allow_growth = True
+tf_config.gpu_options.per_process_gpu_memory_fraction = 0.9
+tf_config.allow_soft_placement = True
+```
+
+Reference:
+
+[Github Issue: Eager Execution error: Blas GEMM launch failed #25403](https://github.com/tensorflow/tensorflow/issues/25403)
+
+[keras 或 tensorflow 调用GPU报错：Blas GEMM launch failed](https://blog.csdn.net/Leo_Xu06/article/details/82023330)
 
 ## Problem3: Limit the ```CUDA_VISIBLE_DEVICES```
 
@@ -36,4 +55,4 @@
 
 Talk is less, show me the code
 
-[Tensorflow2.0 + Multiprocessing DEMO on Cart Pole](./a3c-test.py)
+[Tensorflow2.0 + Multiprocessing DEMO on Cart Pole](../a3c-test.py)
