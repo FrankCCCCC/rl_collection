@@ -1,16 +1,44 @@
 # DRL Algos Collection
-> DDQN
-> 
-> REINFORCE
-> 
-> A2C
-> 
-> A3C
-> 
-> DDPG
-> 
-> PPO
-> 
+- A3C
+
+  Still working on modulizing, but here is the DEMO on OpenAI Cart Pole. I use  Master-Slave strategy(which is similar to the parameter server strategy in TensorFlow1) with TensorFlow2.0 and Multiprocessing.py to implement. Worker send the updated gradients to the master, and the master receive the updated gradients and apply them to the global model. The master also keeps send the lastest model variables to the workers.
+
+  However, TensorFlow2.0 has removed the ```tf.Session()``` which can allocate the computation task to specific device. Therefore, I use ```with tf.device()``` to specify the device of the task.
+
+  For more detail, please read the doc: [Tricks of A3C on TensorFlow2 + Multiprocessing](./docs/tricks_of_A3C_with_tf2.md)
+
+  and here is the DEMO
+
+  [Tensorflow DEMO on Cart Pole](./a3c-test.py)
+  
+- DDQN
+  
+  Implementation of Doubly Deep Q-Network with Tensorflow
+
+  [Tensorflow Code](./models/DDQN.py)
+
+- REINFORCE
+  
+  [Tensorflow Code](./models/REINFORCE.py)
+
+- A2C
+  
+  Implementation of Actor-Critic Network
+
+  [Tensorflow DEMO on Cart Pole](./cartPole-A2C.py)
+  
+  [Tensorflow Code](./models/A2C.py)
+
+  [Pytorch Code](./models/pytorch/A2C.py)
+  
+- DDPG
+  
+  Working on it
+
+- PPO
+
+  Working on it
+ 
 Reference: 
 
 - [当我们在谈论 DRL：从AC、PG 到 A3C、DDPG](https://zhuanlan.zhihu.com/p/36506567)
