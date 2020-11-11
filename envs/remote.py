@@ -27,7 +27,6 @@ class RemoteEnv:
         init_msg = self.encode({'request': 'init'})
         self.socket.send(init_msg)
         init_res = self.decode(self.socket.recv(self.maxlen))
-        print(init_res)
 
         self.state_size = init_res['state_size']
         self.action_size = init_res['action_size']
@@ -53,6 +52,7 @@ class RemoteEnv:
         act_msg = self.encode({'request': 'act', 'action': self.get_action_set()[action]})
         self.socket.send(act_msg)
         res = self.decode(self.socket.recv(self.maxlen))
+        res['is_done'] = self.bool_convert(res['is_done'])
         state, reward, is_done, info = res['state'], res['reward'], res['is_done'], res['info']
 
         self.current_sate = state
@@ -82,16 +82,31 @@ class RemoteEnv:
 
     def encode(self, data):
         # Convert dict object to bytes in JSON format
-        return json.dumps(data).encode(encoding = self.encode_format)
+        # return json.dumps(data).encode(encoding = self.encode_format)
+        return json.dumps(data).encode()
 
     def decode(self, data):
         # Convert bytes in JSON format to dict object
-        return json.loads(data.decode(encoding = self.encode_format))
+        # return json.loads(data.decode(encoding = self.encode_format))
+        return json.loads(data.decode())
+
+    def bool_convert(self, str_bool):
+        if str_bool == 'True':
+            return True
+        elif str_bool == 'False':
+            return False
 
 if __name__ == '__main__':
-    renv = RemoteEnv(host = 'localhost', port = 50007)
+    renv = RemoteEnv(host = 'localhost', port = 50007, encode_format = 'UTF-8')
+    print(f"Init State_Size: {renv.state_size} | Type: {type(renv.state_size)}")
+    print(f"Init Action_Size: {renv.action_size} | Type: {type(renv.action_size)}")
+    
     state = renv.reset()
-    print(f'State: {state}')
+    print(f"State {state} | Type: {type(state)}")
     state_prime, reward, is_done, info = renv.act(1)
-    print(f'State Prime: {state_prime} Reward: {reward} Is_done: {is_done} Info: {info}')
-    print(type(is_done))
+    # print(f'State Prime: {state_prime} Reward: {reward} Is_done: {is_done} Info: {info}')
+
+    print(f"State Prime: {state_prime} | Type: {type(state_prime)}")
+    print(f"Reward: {reward} | Type: {type(reward)}")
+    print(f"Is_done: {is_done} | Type: {type(is_done)}")
+    print(f"Info: {info} | Type: {type(info)}")

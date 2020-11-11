@@ -6,6 +6,7 @@ import numpy as np
 # import tensorflow.compat.v1 as tfv1
 import models.A2C as A2C
 import envs.cartPole as cartPole
+import envs.remote as remote
 import envs.flappyBird as flappyBird
 
 class Master:
@@ -64,16 +65,15 @@ class Master:
             global_agent, env = self.init_agent_env(proc_id, 'ps', ps_id)
 
             while ((not global_grad_queue.empty()) or (global_alive_workers.value > 0)):
-                if not global_grad_queue.empty():
-                    # print(f'Getting gradients from queue')
-                    item = global_grad_queue.get()
-                    global_agent.update(loss = item['loss'], gradients = item['gradients'])
+    #             print(f'Getting gradients from queue')
+                item = global_grad_queue.get()
+                global_agent.update(loss = item['loss'], gradients = item['gradients'])
 
-                    weights = global_agent.model.get_weights()
-                    for i in range(len(global_var_queues)):
-                        if not global_var_queues[i].full():
-                            global_var_queues[i].put(weights)
-                            # print(f'Put vars in queue for worker {i}')
+                weights = global_agent.model.get_weights()
+                for i in range(len(global_var_queues)):
+                    if not global_var_queues[i].full():
+                        global_var_queues[i].put(weights)
+    #                     print(f'Put vars in queue for worker {i}')
             
             print("Complete PS apply")
             for queue in global_var_queues:
@@ -83,16 +83,32 @@ class Master:
             print(f'PS {ps_id} done')
 
     def init_agent_env(self, proc_id, role, role_id):
+        class Agent(A2C.Agent):
+            def build_model(self, name):
+                randUni = tf.keras.initializers.RandomUniform(minval=-0.05, maxval=0.05, seed=None)
+                inputs = tf.keras.layers.Input(shape=self.state_size, name = 'inputs')
+                # gru = tf.keras.layers.GRU(128, activation = 'tanh')(inputs)
+                common = tf.keras.layers.Dense(128, activation="relu")(inputs)
+                common = tf.keras.layers.Dense(128, activation="relu")(common)
+                action = tf.keras.layers.Dense(self.num_action, activation="softmax", name = 'action_outputs')(common)
+                critic = tf.keras.layers.Dense(1, name = 'value_output')(common)
+
+                model = tf.keras.Model(inputs=inputs, outputs=[action, critic])
+
+                return model
+
+        # env = remote.RemoteEnv()
         env = cartPole.CartPoleEnv()
         # env = flappyBird.FlappyBirdEnv()
         NUM_STATE_FEATURES = env.get_num_state_features()
         NUM_ACTIONS = env.get_num_actions()
         PRINT_EVERY_EPISODE = 20
-        LEARNING_RATE = 0.003
+        LEARNING_RATE = 0.0001
         REWARD_DISCOUNT = 0.99
         COEF_VALUE= 1
         COEF_ENTROPY = 0
-        agent = A2C.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, COEF_VALUE, COEF_ENTROPY)
+        # agent = A2C.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, COEF_VALUE, COEF_ENTROPY)
+        agent = Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, COEF_VALUE, COEF_ENTROPY)
 
         return agent, env
 
@@ -125,9 +141,9 @@ class Master:
         # print(tf.config.experimental.list_physical_devices(device_type=None))
         # print(tf.config.experimental.list_logical_devices(device_type=None))
 
-        self.episode_num = 200
+        self.episode_num = 100000
         self.ps_num = 1
-        self.worker_num = 2
+        self.worker_num = 3
         self.current_episode = 1
         global_remain_episode = Value('i', self.episode_num)
         global_alive_workers = Value('i', self.worker_num)
