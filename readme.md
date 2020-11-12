@@ -1,5 +1,16 @@
 # DRL Algos Collection
-- A3C
+
+### A colleciotn of implements of classical DRL algorithms.
+
+The repository contain the implementation of A3C, A2C, DDQN, and REINFORCE(naive) with Tensorflow2.0. Some of them have been demostrated in the OpenAI Cart Pole environment.
+
+In additon, it modulizes the API of environments(Cart Pole, Flappy Bird, and remote environment), exploration stratgies(although I still working on it). The remote environment even allows the agent to connect to the external server and interact with them.
+
+---
+
+## DRL Models
+
+### A3C
 
   Still working on modulizing, but here is the DEMO on OpenAI Cart Pole. I use  Master-Slave strategy(which is similar to the parameter server strategy in TensorFlow1) with TensorFlow2.0 and Multiprocessing.py to implement. Worker send the updated gradients to the master, and the master receive the updated gradients and apply them to the global model. The master also keeps send the lastest model variables to the workers.
 
@@ -10,18 +21,8 @@
   and here is the DEMO
 
   [Tensorflow DEMO on Cart Pole](./a3c-test.py)
-  
-- DDQN
-  
-  Implementation of Doubly Deep Q-Network with Tensorflow
 
-  [Tensorflow Code](./models/DDQN.py)
-
-- REINFORCE
-  
-  [Tensorflow Code](./models/REINFORCE.py)
-
-- A2C
+### A2C
   
   Implementation of Actor-Critic Network
 
@@ -29,17 +30,52 @@
   
   [Tensorflow Code](./models/A2C.py)
 
-  [Pytorch Code](./models/pytorch/A2C.py)
+### DDQN
   
-- DDPG
+  Implementation of Doubly Deep Q-Network with Tensorflow
+
+  [Tensorflow Code](./models/DDQN.py)
+
+### REINFORCE
+  
+  [Tensorflow Code](./models/REINFORCE.py)
+  
+### DDPG
   
   Working on it
 
-- PPO
+### PPO
 
   Working on it
- 
-Reference: 
+
+---
+
+## Environments
+
+Integrate the API of different environments.
+
+### Cart Pole
+
+From OpenAI Cart Pole.
+
+[Python Code](./envs/cartPole.py)
+
+### Flappy Bird
+
+From PLE Flappy Bird
+
+[Python Code](./envs/flappyBird.py)
+
+### Remote Environment
+
+Create a TCP client and connect to the provided server. You can see the DEMO and the details in [another repo(RL Java Integral)](https://github.com/Neural-Storage/RL_Java_Integral) which we implement a Java multi-threading server and interact with the A3C model. Thanks 
+[tom1236868](https://github.com/tom1236868) for implementing the Java server.
+
+[Python Code](./envs/remote.py)
+
+---
+
+## Reference: 
 
 - [当我们在谈论 DRL：从AC、PG 到 A3C、DDPG](https://zhuanlan.zhihu.com/p/36506567)
 
@@ -54,9 +90,9 @@ Reference:
 - [Deep Reinforcement Learning: Playing CartPole through Asynchronous Advantage Actor Critic (A3C) with tf.keras and eager execution](https://blog.tensorflow.org/2018/07/deep-reinforcement-learning-keras-eager-execution.html)
 
 - [flappy bird REINFORCE](https://github.com/GordonCai/project-deep-reinforcement-learning-with-policy-gradient/blob/master/Code/PG-Pong-Gordon-ANN-1.ipynb)
-- 
+  
 - [kevin-fang/reinforced-flappy-bird](https://github.com/kevin-fang/reinforced-flappy-bird/blob/master/tf_graph.py)
-- 
+ 
 - [Tensorflow 2.0 Pitfalls](http://blog.ai.ovgu.de/posts/jens/2019/001_tf20_pitfalls/index.html)
 - [分布式训练（理论篇）](https://zhuanlan.zhihu.com/p/129912419)
 - [Ceruleanacg/Learning-Notes](https://github.com/Ceruleanacg/Learning-Notes)
