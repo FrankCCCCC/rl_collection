@@ -56,7 +56,7 @@ class A3C:
 
             # Setup recorder
             ckpt = tf.train.Checkpoint(model=global_agent.model, opt=global_agent.optimizer)
-            recorder = Util.Recorder(ckpt=ckpt, ckpt_path='results/ckpt', plot_title='A3C FlappyBird', filename='results/a3c_flappy', save_period=200)
+            recorder = Util.Recorder(ckpt=ckpt, ckpt_path='results/ckpt', plot_title='A3C FlappyBird', filename='results/a3c_flappy', save_period=5000)
             ep = recorder.restore()
             print(f"Restore {ep}")
             with global_remain_episode.get_lock():
@@ -109,7 +109,7 @@ class A3C:
 
         self.episode_num = 100000
         self.ps_num = 1
-        self.worker_num = 25
+        self.worker_num = 20
         self.current_episode = 1
         global_remain_episode = Value('i', self.episode_num)
         global_alive_workers = Value('i', self.worker_num)

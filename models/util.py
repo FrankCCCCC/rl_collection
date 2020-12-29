@@ -59,7 +59,8 @@ class Recorder():
     def to_plot(self):
         # Plot Reward History
         # figure(num=None, figsize=(24, 6), dpi=80)
-        df = self.df.loc[self.df['epoch'] % 50 == 0]
+        df = self.df.loc[self.df['epoch'] % 10 == 0]
+        # df = self.df
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(24, 6), dpi=80)
         fig.suptitle(f'{self.plot_title}')
 
@@ -74,6 +75,7 @@ class Recorder():
         ax2.plot(df['epoch'], df['avg_loss'], color='orange', label='avg loss')
         ax2.set_xlabel('Episodes')
         ax2.set_ylabel('Loss / Episode')
+        ax2.yscale('log')
         ax2.grid()
         ax2.legend()
 

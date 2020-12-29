@@ -75,6 +75,13 @@ Create a TCP client and connect to the provided server. You can see the DEMO and
 
 ---
 
+### With LSTM
+
+Reference:
+- [Keras LSTM layer](https://keras.io/api/layers/recurrent_layers/lstm/)
+- [Keras TimeDistributed layer](https://keras.io/api/layers/recurrent_layers/time_distributed/)
+- [Github flyyufelix/VizDoom-Keras-RL](https://github.com/flyyufelix/VizDoom-Keras-RL/blob/master/a2c_lstm.py)
+
 ## Reference: 
 
 - [当我们在谈论 DRL：从AC、PG 到 A3C、DDPG](https://zhuanlan.zhihu.com/p/36506567)
