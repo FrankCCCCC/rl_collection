@@ -20,7 +20,8 @@ In additon, it modulizes the API of environments(Cart Pole, Flappy Bird, and rem
 
   and here is the DEMO
 
-  [Tensorflow DEMO on Cart Pole](./a3c-test.py)
+  [Tensorflow DEMO on Cart Pole](./a3c-cartpole.py)
+  [Tensorflow DEMO on Flappy Bird](./a3c-flappy.py)
 
 ### A2C
   
