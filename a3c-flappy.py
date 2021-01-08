@@ -23,20 +23,47 @@ class A3C:
         gpus = tf.config.experimental.list_physical_devices('GPU')
         tf.config.experimental.set_memory_growth(gpus[0], True)
         # tf.config.experimental.set_virtual_device_configuration(gpus[0], [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=10240)])
+
+        # Set Process Priority
+        # Util.highpriority()
+
         with tf.device("/CPU:0"):
-            local_agent, local_env = self.init_agent_env(proc_id, 'worker', worker_id)
+            local_agent, local_env, n_step = self.init_agent_env(proc_id, 'worker', worker_id)
+
+            # Reset the weight back to checkpoint
+            ep = 0
+            ckpt = tf.train.Checkpoint(model=local_agent.model, opt=local_agent.optimizer)
+            recorder = Util.Recorder(ckpt=ckpt, ckpt_path='results/ckpt', plot_title='A3C FlappyBird', filename='results/a3c_flappy', save_period=500)
+            ep = recorder.restore
+
+            # Copy model from the global agent
+            global_vars = global_var_queue.get()
+            local_agent.model.set_weights(global_vars)
+
+            # Reset Game State
             state = local_env.reset()
+
             while global_remain_episode.value > 0:
-                episode_reward, loss, gradients, trajectory = local_agent.train_on_env(env = local_env, cal_gradient_vars = None)
+                is_over = False
+                episode_reward = 0
+
+                # Update n step
+                while not is_over:
+                    # Interact n steps
+                    reward, loss, gradients, trajectory, is_over = local_agent.train_on_env(env = local_env, n_step = n_step, cal_gradient_vars = None)
+                    episode_reward = episode_reward + reward
+
+                    # Update
+                    global_grad_queue.put({'loss': loss, 'reward': episode_reward, 'gradients': gradients, 'is_over': is_over, 'worker_id': worker_id})
+                    if not global_var_queue.empty():
+                        global_vars = global_var_queue.get()
+                        local_agent.model.set_weights(global_vars)
+                        # local_agent.model.set_weights(global_vars['model'])
+                        # local_agent.optimizer.set_weights(global_vars['opt'])
+                        # print(f'Worker {worker_id} Update Weights')
+
                 # print(f'Episode {global_remain_episode.value} Reward with worker {worker_id}: {episode_reward}')
-
                 global_res_queue.put({'loss': loss, 'reward': episode_reward, 'worker_id': worker_id})
-                global_grad_queue.put({'loss': loss, 'reward': episode_reward, 'gradients': gradients, 'worker_id': worker_id})
-                if not global_var_queue.empty():
-                    global_vars = global_var_queue.get()
-                    local_agent.model.set_weights(global_vars)
-    #                 print(f'Worker {worker_id} Update Weights')
-
                 with global_remain_episode.get_lock():
                     global_remain_episode.value -= 1
 
@@ -50,29 +77,43 @@ class A3C:
         gpus = tf.config.experimental.list_physical_devices('GPU')
         tf.config.experimental.set_memory_growth(gpus[0], True)
 
+        # Set Process Priority
+        # Util.highpriority()
+
         # tf.config.experimental.set_virtual_device_configuration(gpus[0], [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=10240)])
         with tf.device("/CPU:0"):
-            global_agent, env = self.init_agent_env(proc_id, 'ps', ps_id)
+            global_agent, env, n_step = self.init_agent_env(proc_id, 'ps', ps_id)
 
             # Setup recorder
+            ep = 0
             ckpt = tf.train.Checkpoint(model=global_agent.model, opt=global_agent.optimizer)
-            recorder = Util.Recorder(ckpt=ckpt, ckpt_path='results/ckpt', plot_title='A3C FlappyBird', filename='results/a3c_flappy', save_period=5000)
+            recorder = Util.Recorder(ckpt=ckpt, ckpt_path='results/ckpt', plot_title='A3C FlappyBird', filename='results/a3c_flappy', save_period=500)
             ep = recorder.restore()
             print(f"Restore {ep}")
             with global_remain_episode.get_lock():
                 global_remain_episode.value = global_remain_episode.value - ep
+
+            # Copy model to the local agent
+            model_weights = global_agent.model.get_weights()
+            for i in range(len(global_var_queues)):
+                global_var_queues[i].put(model_weights)
 
             while ((not global_grad_queue.empty()) or (global_alive_workers.value > 0)):
                 if not global_grad_queue.empty():
                     # print(f'Getting gradients from queue')
                     item = global_grad_queue.get()
                     global_agent.update(loss = item['loss'], gradients = item['gradients'])
-                    recorder.record(float(item['loss']), float(item['reward']))
 
-                    weights = global_agent.model.get_weights()
+                    # Record when an episode is over
+                    if item['is_over']:
+                        recorder.record(float(item['loss']), float(item['reward']))
+
+                    model_weights = global_agent.model.get_weights()
+                    # opt_weights = global_agent.optimizer.get_weights()
                     for i in range(len(global_var_queues)):
                         if not global_var_queues[i].full():
-                            global_var_queues[i].put(weights)
+                            global_var_queues[i].put(model_weights)
+                            # global_var_queues[i].put({'model': model_weights, 'opt': opt_weights})
                             # print(f'Put vars in queue for worker {i}')
             
             print("Complete PS apply")
@@ -91,9 +132,10 @@ class A3C:
         REWARD_DISCOUNT = 0.99
         COEF_VALUE= 1
         COEF_ENTROPY = 0
+        n_step = None
         agent = A2C.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, COEF_VALUE, COEF_ENTROPY)
 
-        return agent, env
+        return agent, env, n_step
 
     # def is_having_training_info(self):
     #     return ((not global_res_queue.empty()) or (global_alive_workers.value > 0))
@@ -107,7 +149,7 @@ class A3C:
         # print(tf.config.experimental.list_physical_devices(device_type=None))
         # print(tf.config.experimental.list_logical_devices(device_type=None))
 
-        self.episode_num = 100000
+        self.episode_num = 3000000
         self.ps_num = 1
         self.worker_num = 20
         self.current_episode = 1
