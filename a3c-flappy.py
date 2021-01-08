@@ -6,12 +6,12 @@ import numpy as np
 import pandas as pd
 import models.A2C as A2C
 import envs.cartPole as cartPole
-import envs.flappyBird as flappyBird
+import envs.flappyBird_mod as flappyBird
 import models.util as Util
 
 class A3C:
     def __init__(self):
-        os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+        os.environ["CUDA_VISIBLE_DEVICES"] = "3"
         os.environ["OMP_NUM_THREADS"] = "1"
         os.environ["SDL_VIDEODRIVER"] = "dummy"
         os.environ["SDL_AUDIODRIVER"] = "dummy"
@@ -25,7 +25,19 @@ class A3C:
         # tf.config.experimental.set_virtual_device_configuration(gpus[0], [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=10240)])
         with tf.device("/CPU:0"):
             local_agent, local_env = self.init_agent_env(proc_id, 'worker', worker_id)
+
+            # Reset the weight back to checkpoint
+            ckpt = tf.train.Checkpoint(model=local_agent.model, opt=local_agent.optimizer)
+            recorder = Util.Recorder(ckpt=ckpt, ckpt_path='results/ckpt', plot_title='A3C FlappyBird', filename='results/a3c_flappy', save_period=5000)
+            ep = recorder.restore()
+
+            # Copy model from the global agent
+            global_vars = global_var_queue.get()
+            local_agent.model.set_weights(global_vars)
+
+            # Reset Game State
             state = local_env.reset()
+
             while global_remain_episode.value > 0:
                 episode_reward, loss, gradients, trajectory = local_agent.train_on_env(env = local_env, cal_gradient_vars = None)
                 # print(f'Episode {global_remain_episode.value} Reward with worker {worker_id}: {episode_reward}')
@@ -35,6 +47,8 @@ class A3C:
                 if not global_var_queue.empty():
                     global_vars = global_var_queue.get()
                     local_agent.model.set_weights(global_vars)
+                    # local_agent.model.set_weights(global_vars['model'])
+                    # local_agent.optimizer.set_weights(global_vars['opt'])
     #                 print(f'Worker {worker_id} Update Weights')
 
                 with global_remain_episode.get_lock():
@@ -62,6 +76,11 @@ class A3C:
             with global_remain_episode.get_lock():
                 global_remain_episode.value = global_remain_episode.value - ep
 
+            # Copy model to the local agent
+            model_weights = global_agent.model.get_weights()
+            for i in range(len(global_var_queues)):
+                global_var_queues[i].put(model_weights)
+
             while ((not global_grad_queue.empty()) or (global_alive_workers.value > 0)):
                 if not global_grad_queue.empty():
                     # print(f'Getting gradients from queue')
@@ -69,10 +88,12 @@ class A3C:
                     global_agent.update(loss = item['loss'], gradients = item['gradients'])
                     recorder.record(float(item['loss']), float(item['reward']))
 
-                    weights = global_agent.model.get_weights()
+                    model_weights = global_agent.model.get_weights()
+                    # opt_weights = global_agent.optimizer.get_weights()
                     for i in range(len(global_var_queues)):
                         if not global_var_queues[i].full():
-                            global_var_queues[i].put(weights)
+                            global_var_queues[i].put(model_weights)
+                            # global_var_queues[i].put({'model': model_weights, 'opt': opt_weights})
                             # print(f'Put vars in queue for worker {i}')
             
             print("Complete PS apply")
@@ -87,11 +108,16 @@ class A3C:
         env = flappyBird.FlappyBirdEnv()
         NUM_STATE_FEATURES = env.get_num_state_features()
         NUM_ACTIONS = env.get_num_actions()
-        LEARNING_RATE = 0.0001
+        LEARNING_RATE = 0.0005
+        # LEARNING_RATE = 0.0002
         REWARD_DISCOUNT = 0.99
         COEF_VALUE= 1
-        COEF_ENTROPY = 0
-        agent = A2C.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, COEF_VALUE, COEF_ENTROPY)
+        # COEF_ENTROPY = 0.001
+        # COEF_ENTROPY_DECAY = 0.999
+        COEF_ENTROPY = 0.01 # 越大 上下 action 就越平均(越鼓勵探索)
+        # COEF_ENTROPY = 0
+        COEF_ENTROPY_DECAY = 1
+        agent = A2C.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, COEF_VALUE, COEF_ENTROPY, COEF_ENTROPY_DECAY)
 
         return agent, env
 
@@ -107,9 +133,9 @@ class A3C:
         # print(tf.config.experimental.list_physical_devices(device_type=None))
         # print(tf.config.experimental.list_logical_devices(device_type=None))
 
-        self.episode_num = 100000
+        self.episode_num = 1000000
         self.ps_num = 1
-        self.worker_num = 20
+        self.worker_num = 10
         self.current_episode = 1
         global_remain_episode = Value('i', self.episode_num)
         global_alive_workers = Value('i', self.worker_num)

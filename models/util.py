@@ -75,7 +75,7 @@ class Recorder():
         ax2.plot(df['epoch'], df['avg_loss'], color='orange', label='avg loss')
         ax2.set_xlabel('Episodes')
         ax2.set_ylabel('Loss / Episode')
-        ax2.yscale('log')
+        ax2.set_yscale('log')
         ax2.grid()
         ax2.legend()
 
@@ -90,6 +90,7 @@ class Recorder():
                 print(f"latest {latest}")
                 if latest:
                     self.ckpt.restore(latest)
+                    print(f"Recover from Checkpoint {latest}")
             df_old = pd.read_csv(f"{self.filename}.csv", index_col=0)
             self.df = df_old
             recover_ep = int(self.df['epoch'].iloc[-1])
