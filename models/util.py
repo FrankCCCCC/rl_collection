@@ -20,6 +20,31 @@ def test_gpu():
             # Memory growth must be set before GPUs have been initialized
             print(e)
 
+def highpriority():
+    """ Set the priority of the process to above-normal."""
+
+    import sys
+    try:
+        sys.getwindowsversion()
+    except AttributeError:
+        isWindows = False
+    else:
+        isWindows = True
+
+    if isWindows:
+        # Based on:
+        #   "Recipe 496767: Set Process Priority In Windows" on ActiveState
+        #   http://code.activestate.com/recipes/496767/
+        import win32api,win32process,win32con
+
+        pid = win32api.GetCurrentProcessId()
+        handle = win32api.OpenProcess(win32con.PROCESS_ALL_ACCESS, True, pid)
+        win32process.SetPriorityClass(handle, win32process.ABOVE_NORMAL_PRIORITY_CLASS)
+    else:
+        import os
+
+        os.nice(0)
+
 class Recorder():
     def __init__(self, ckpt=None, ckpt_path=None, max_to_keep=250, plot_title=None, moving_avg_coef=0.04, filename=None, save_period=200):
         self.df = pd.DataFrame(columns=['epoch', 'loss', 'avg_loss', 'reward', 'avg_reward'])

@@ -12,6 +12,7 @@ class Agent:
         self.eps = 0
         self.data_type = tf.float32
         self.optimizer = tf.keras.optimizers.Adam(learning_rate = learning_rate)
+        # self.optimizer = tf.keras.optimizers.RMSprop(learning_rate=learning_rate, rho=0.99, centered=True)
         self.avg_loss = tf.keras.metrics.Mean(name = 'loss')
         self.model = self.build_model('model')
         self.is_shutdown_explore = False
@@ -128,7 +129,7 @@ class Agent:
         self.iter += 1
         self.eps += 1
 
-    def train_on_env(self, env, is_show = False, cal_gradient_vars = None):
+    def train_on_env(self, env, n_step = None, is_show = False, cal_gradient_vars = None):
         # By default, update agent's own trainable variables
         if cal_gradient_vars == None:
             cal_gradient_vars = self.model.trainable_variables
@@ -138,14 +139,17 @@ class Agent:
         with tf.GradientTape() as tape:
             tape.watch(cal_gradient_vars)
             episode_reward = 0
-            state = env.reset(is_show)
+            step = 0
+            is_over = False
+            state = env.get_state()
+            # state = env.reset(is_show)
 
             action_probs = []
             critic_values = []
             rewards = []
             trajectory = []
 
-            while not env.is_over():
+            while (not env.is_over()) and (n_step == None or step < n_step):
                 # env.render()
                 action, act_prob_dist, value = self.select_action(state)
 
@@ -160,10 +164,13 @@ class Agent:
 
                 state = state_prime
                 episode_reward += reward
+                step = step + 1
 
             loss = self.loss(action_probs, critic_values, rewards)
             gradients = self.__get_gradients(loss, tape, cal_gradient_vars)
 #             self.update(gradients, apply_gradient_vars)
-            env.reset()
+            if env.is_over():
+                is_over = True
+                env.reset()
 
-            return episode_reward, loss, gradients, trajectory
+            return episode_reward, loss, gradients, trajectory, is_over

@@ -6,12 +6,12 @@ import numpy as np
 import pandas as pd
 import models.A2C as A2C
 import envs.cartPole as cartPole
-import envs.flappyBird_mod as flappyBird
+import envs.flappyBird as flappyBird
 import models.util as Util
 
 class A3C:
     def __init__(self):
-        os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0"
         os.environ["OMP_NUM_THREADS"] = "1"
         os.environ["SDL_VIDEODRIVER"] = "dummy"
         os.environ["SDL_AUDIODRIVER"] = "dummy"
@@ -23,18 +23,14 @@ class A3C:
         gpus = tf.config.experimental.list_physical_devices('GPU')
         tf.config.experimental.set_memory_growth(gpus[0], True)
         # tf.config.experimental.set_virtual_device_configuration(gpus[0], [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=10240)])
-
-        # Set Process Priority
-        # Util.highpriority()
-
         with tf.device("/CPU:0"):
             local_agent, local_env, n_step = self.init_agent_env(proc_id, 'worker', worker_id)
 
             # Reset the weight back to checkpoint
             ep = 0
             ckpt = tf.train.Checkpoint(model=local_agent.model, opt=local_agent.optimizer)
-            recorder = Util.Recorder(ckpt=ckpt, ckpt_path='results/ckpt', plot_title='A3C FlappyBird', filename='results/a3c_flappy', save_period=500)
-            ep = recorder.restore
+            recorder = Util.Recorder(ckpt=ckpt, ckpt_path='results/ckpt_nstep', plot_title='A3C FlappyBird', filename='results/a3c_flappy_nstep', save_period=5000)
+            # ep = recorder.restore()
 
             # Copy model from the global agent
             global_vars = global_var_queue.get()
@@ -77,9 +73,6 @@ class A3C:
         gpus = tf.config.experimental.list_physical_devices('GPU')
         tf.config.experimental.set_memory_growth(gpus[0], True)
 
-        # Set Process Priority
-        # Util.highpriority()
-
         # tf.config.experimental.set_virtual_device_configuration(gpus[0], [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=10240)])
         with tf.device("/CPU:0"):
             global_agent, env, n_step = self.init_agent_env(proc_id, 'ps', ps_id)
@@ -87,8 +80,8 @@ class A3C:
             # Setup recorder
             ep = 0
             ckpt = tf.train.Checkpoint(model=global_agent.model, opt=global_agent.optimizer)
-            recorder = Util.Recorder(ckpt=ckpt, ckpt_path='results/ckpt', plot_title='A3C FlappyBird', filename='results/a3c_flappy', save_period=500)
-            ep = recorder.restore()
+            recorder = Util.Recorder(ckpt=ckpt, ckpt_path='results/ckpt_nstep', plot_title='A3C FlappyBird', filename='results/a3c_flappy_nstep', save_period=1000)
+            # ep = recorder.restore()
             print(f"Restore {ep}")
             with global_remain_episode.get_lock():
                 global_remain_episode.value = global_remain_episode.value - ep
@@ -128,12 +121,11 @@ class A3C:
         env = flappyBird.FlappyBirdEnv()
         NUM_STATE_FEATURES = env.get_num_state_features()
         NUM_ACTIONS = env.get_num_actions()
-        LEARNING_RATE = 0.0005
-        # LEARNING_RATE = 0.0002
+        LEARNING_RATE = 0.001
         REWARD_DISCOUNT = 0.99
         COEF_VALUE= 1
         COEF_ENTROPY = 0
-        n_step = None
+        n_step = 5
         agent = A2C.Agent((NUM_STATE_FEATURES, ), NUM_ACTIONS, REWARD_DISCOUNT, LEARNING_RATE, COEF_VALUE, COEF_ENTROPY)
 
         return agent, env, n_step
@@ -150,9 +142,9 @@ class A3C:
         # print(tf.config.experimental.list_physical_devices(device_type=None))
         # print(tf.config.experimental.list_logical_devices(device_type=None))
 
-        self.episode_num = 3000000
+        self.episode_num = 5000
         self.ps_num = 1
-        self.worker_num = 10
+        self.worker_num = 4
         self.current_episode = 1
         global_remain_episode = Value('i', self.episode_num)
         global_alive_workers = Value('i', self.worker_num)
