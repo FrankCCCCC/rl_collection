@@ -31,7 +31,7 @@ class Master:
             local_agent, local_env = self.init_agent_env(proc_id, 'worker', worker_id)
             state = local_env.reset()
             while global_remain_episode.value > 0:
-                episode_reward, loss, gradients, trajectory = local_agent.train_on_env(env = local_env, cal_gradient_vars = None)
+                episode_reward, loss, gradients, trajectory, is_over = local_agent.train_on_env(env = local_env, cal_gradient_vars = None)
                 # print(f'Episode {global_remain_episode.value} Reward with worker {worker_id}: {episode_reward}')
 
                 global_res_queue.put({'loss': loss, 'reward': episode_reward, 'worker_id': worker_id})
@@ -83,8 +83,8 @@ class Master:
             print(f'PS {ps_id} done')
 
     def init_agent_env(self, proc_id, role, role_id):
-        # env = cartPole.CartPoleEnv()
-        env = flappyBird.FlappyBirdEnv()
+        env = cartPole.CartPoleEnv()
+        # env = flappyBird.FlappyBirdEnv()
         NUM_STATE_FEATURES = env.get_num_state_features()
         NUM_ACTIONS = env.get_num_actions()
         PRINT_EVERY_EPISODE = 20
