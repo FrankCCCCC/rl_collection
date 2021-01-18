@@ -27,7 +27,7 @@ class A3C:
             local_agent, local_env = self.init_agent_env(proc_id, 'worker', worker_id)
             state = local_env.reset()
             while global_remain_episode.value > 0:
-                episode_reward, loss, gradients, trajectory = local_agent.train_on_env(env = local_env, cal_gradient_vars = None)
+                episode_reward, loss, gradients, trajectory, is_over = local_agent.train_on_env(env = local_env, cal_gradient_vars = None)
                 # print(f'Episode {global_remain_episode.value} Reward with worker {worker_id}: {episode_reward}')
 
                 global_res_queue.put({'loss': loss, 'reward': episode_reward, 'worker_id': worker_id})
